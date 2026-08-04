@@ -1,0 +1,18 @@
+flowchart TD
+    A[Order received] --> B{Payment valid?}
+    B -->|No| C[Notify customer]
+    B -->|Yes| D[Reserve inventory]
+
+    subgraph Zürich Fulfillment Center
+        D --> E[Pick items]
+        E --> F[Pack shipment]
+        F --> G[(Print label)]
+    end
+
+    G --> H{Fragile items?}
+    H -->|Yes| I["Add \"Fragile\" sticker"]
+    H -->|No| J[Hand off to carrier]
+    I --> J
+    J --> K[Update tracking status]
+    C --> L[Close order]
+    K --> L
