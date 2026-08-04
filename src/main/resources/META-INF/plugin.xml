@@ -1,0 +1,38 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>dev.gaphunter.mermaidcompanion</id>
+    <name>Mermaid Companion</name>
+    <vendor>Gap Hunter Labs</vendor>
+    <description><![CDATA[
+        <p>Syntax highlighting and real validation for .mmd/.mermaid
+        diagram source files (flowchart, sequence, and class diagrams): a
+        real paid competitor's reviewers reported it "shows false warnings
+        for valid non-ASCII subgraph identifiers" and "false errors for
+        valid node shapes where the node contains non-ASCII characters" --
+        this plugin's lexer is Unicode-aware throughout (no ASCII-only
+        character-class check anywhere in the identifier/label path), so
+        those exact false positives structurally cannot happen here.</p>
+        <p>v0.1 is validation only, no visual diagram preview: unterminated
+        string literals, unmatched/mismatched node-shape brackets, and
+        `subgraph` blocks missing their `end` are flagged as real errors --
+        exactly the "does it actually validate my syntax" gap the cited
+        1-star review described ("It opens and shows me a bunch of icons on
+        page. That's it. No other functionality at all.").</p>
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType name="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidFileType"
+                   fieldName="INSTANCE" language="Mermaid" extensions="mmd;mermaid" order="first"/>
+        <fileTypeDetector implementation="dev.gaphunter.mermaidcompanion.detection.MermaidFileTypeOverrider"/>
+        <lang.parserDefinition language="Mermaid"
+                                implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidParserDefinition"/>
+        <lang.syntaxHighlighterFactory language="Mermaid"
+                                        implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidSyntaxHighlighterFactory"/>
+        <editorHighlighterProvider filetype="Mermaid"
+                                    implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidEditorHighlighterProvider"/>
+        <annotator language="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
+        <annotator language="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
+    </extensions>
+</idea-plugin>
