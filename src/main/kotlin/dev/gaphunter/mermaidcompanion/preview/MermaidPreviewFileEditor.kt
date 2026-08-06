@@ -12,6 +12,9 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.util.Alarm
+import org.cef.browser.CefBrowser
+import org.cef.browser.CefFrame
+import org.cef.handler.CefLoadHandlerAdapter
 import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import javax.swing.JComponent
@@ -40,6 +43,16 @@ class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBa
     private val document: Document? = FileDocumentManager.getInstance().getDocument(file)
     private var browser: JBCefBrowser? = null
 
+    // loadHTML() is fire-and-forget -- the shell page (and the
+    // window.gapHunterRenderMermaid function it defines) isn't actually
+    // loaded yet the instant loadHTML() returns. Calling
+    // executeJavaScript() before onLoadEnd fires hits a ReferenceError
+    // in the page (function not defined yet) with nothing visible on
+    // either side -- the preview just stays blank. Confirmed by hitting
+    // this exact blank-preview symptom in a real runIde sandbox.
+    @Volatile
+    private var pageLoaded = false
+
     init {
         val supported = JBCefApp.isSupported()
         thisLogger().warn("Mermaid Companion preview: JBCefApp.isSupported()=$supported")
@@ -57,7 +70,6 @@ class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBa
         val newBrowser = JBCefBrowser()
         browser = newBrowser
         panel.add(newBrowser.component, BorderLayout.CENTER)
-        newBrowser.loadHTML(shellHtml())
 
         // Debounced re-render, never on every keystroke -- same "heavy
         // work never blocks typing" spirit as CONSTITUTION.md S6's first
@@ -70,10 +82,19 @@ class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBa
             }
         }, newBrowser)
 
-        renderCurrentDocument()
+        newBrowser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
+            override fun onLoadEnd(cefBrowser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
+                if (!frame.isMain) return
+                pageLoaded = true
+                renderCurrentDocument()
+            }
+        }, newBrowser.cefBrowser)
+
+        newBrowser.loadHTML(shellHtml())
     }
 
     private fun renderCurrentDocument() {
+        if (!pageLoaded) return
         val activeBrowser = browser ?: return
         val text = document?.text ?: return
         val escaped = MermaidJsEscaper.escapeForTemplateLiteral(text)
