@@ -12,12 +12,16 @@
         this plugin's lexer is Unicode-aware throughout (no ASCII-only
         character-class check anywhere in the identifier/label path), so
         those exact false positives structurally cannot happen here.</p>
-        <p>v0.1 is validation only, no visual diagram preview: unterminated
-        string literals, unmatched/mismatched node-shape brackets, and
-        `subgraph` blocks missing their `end` are flagged as real errors --
-        exactly the "does it actually validate my syntax" gap the cited
-        1-star review described ("It opens and shows me a bunch of icons on
-        page. That's it. No other functionality at all.").</p>
+        <p>Unterminated string literals, unmatched/mismatched node-shape
+        brackets, and `subgraph` blocks missing their `end` are flagged as
+        real errors -- exactly the "does it actually validate my syntax" gap
+        the cited 1-star review described.</p>
+        <p>A "Preview" tab renders the diagram visually via the real
+        mermaid.js (bundled), next to the text editor -- the direct fix for
+        that same review ("It opens and shows me a bunch of icons on page.
+        That's it. No other functionality at all."). If this IDE build
+        doesn't support embedded browser rendering, the tab shows a plain
+        message instead; everything else in the plugin is unaffected.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -34,5 +38,6 @@
                                     implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidEditorHighlighterProvider"/>
         <annotator language="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
         <annotator language="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
+        <fileEditorProvider implementation="dev.gaphunter.mermaidcompanion.preview.MermaidPreviewFileEditorProvider"/>
     </extensions>
 </idea-plugin>
