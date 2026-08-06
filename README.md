@@ -35,16 +35,25 @@ paid, vendor Tachi Labs. Real, verbatim reviewer complaints:
   `id[(cylinder)]` are never flagged), and `subgraph` blocks missing
   their `end` -- genuine syntax errors, checked correctly against real
   Mermaid grammar instead of a naive ASCII regex.
-- **v0.1 is validation only, no visual diagram preview** -- directly
-  targets the "opens and shows a bunch of icons, no other functionality"
-  complaint by making sure the one thing it does (tell you if your
-  diagram source is syntactically valid) actually works correctly,
-  rather than promising a rendering engine on top of it.
 - **Pure-function checker, off any UI thread concern.**
   `MermaidSyntaxChecker.check(text)` is a plain function over text (drives
   `MermaidLexer`'s token stream once), directly unit-testable without a
   platform test fixture; the Annotator is a thin per-file wrapper around
   it.
+- **Visual preview directly answers "no other functionality at all."**
+  A "Preview" tab renders the diagram via the real, bundled mermaid.js
+  (pinned 11.16.1, MIT-licensed, downloaded once and committed --
+  `resources/mermaid/`, never fetched at runtime) inside a `JBCefBrowser`.
+  First and only use of JCEF in this catalog: it's the one dependency
+  worth accepting, since hand-rolling graph layout (Sugiyama/dagre-style)
+  would be months of work and look worse than the real thing -- exactly
+  the "functionality at half-measure" risk this plugin exists to avoid.
+  Re-renders are debounced (~300ms after the last keystroke), and if this
+  IDE build doesn't support JCEF, the tab shows a plain fallback message
+  instead -- the rest of the plugin (highlighting, validation) is
+  completely unaffected either way.
+- **v1 scope cuts, deliberate:** no custom pan/zoom (mermaid.js already
+  has its own); no PNG/SVG export button.
 
 ## Usage
 
@@ -52,7 +61,7 @@ Open a `.mmd`/`.mermaid` file. Structural keywords (`flowchart`,
 `subgraph`, `end`, `sequenceDiagram`, `classDiagram`, etc.) and node-shape
 delimiters, strings, and comments get their own colors; unterminated
 strings, unmatched/mismatched brackets, and subgraphs missing `end` are
-flagged as real errors.
+flagged as real errors. Click the "Preview" tab for a live rendered view.
 
 ## Enterprise / Team Licensing
 
@@ -70,3 +79,6 @@ Need enterprise features, custom rules, or team licensing? Contact us at
 ## License
 
 Apache-2.0. See `LICENSE`.
+
+Bundles [mermaid.js](https://github.com/mermaid-js/mermaid) 11.16.1,
+MIT-licensed -- see `src/main/resources/mermaid/LICENSE-mermaid.txt`.
