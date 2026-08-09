@@ -14,7 +14,11 @@ import javax.swing.Icon
  * bundled `FileTypeIdentifiableByVirtualFile` implementations.
  */
 object MermaidFileType : LanguageFileType(MermaidLanguage), FileTypeIdentifiableByVirtualFile {
-    override fun getName(): String = "Mermaid"
+    // Kept distinct from the Language ID ("MermaidCompanion") on
+    // purpose, but changed here too for consistency and to avoid a
+    // future FileType-name collision with JetBrains's bundled Mermaid
+    // support -- see the comment on MermaidLanguage for the full story.
+    override fun getName(): String = "MermaidCompanion"
     override fun getDescription(): String = "Mermaid diagram source"
     override fun getDefaultExtension(): String = "mmd"
     override fun getIcon(): Icon? = null
