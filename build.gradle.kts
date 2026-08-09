@@ -50,4 +50,18 @@ intellijPlatform {
             VerifyPluginTask.FailureLevel.SCHEDULED_FOR_REMOVAL_API_USAGES,
         )
     }
+
+    // Same pattern as ansible-companion/api-security-companion/
+    // openapi-companion: token+cert live only in the local, non-repo
+    // ~/.gradle/gradle.properties (self-signed cert generated once for
+    // the whole catalog, 10-year validity) -- never in this file.
+    publishing {
+        token.set(providers.gradleProperty("gapHunterLabs.marketplace.token"))
+    }
+
+    signing {
+        certificateChain.set(providers.gradleProperty("gapHunterLabs.marketplace.certificateChain"))
+        privateKey.set(providers.gradleProperty("gapHunterLabs.marketplace.privateKey"))
+        password.set(providers.gradleProperty("gapHunterLabs.marketplace.privateKeyPassword"))
+    }
 }
