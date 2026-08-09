@@ -27,17 +27,24 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <fileType name="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidFileType"
-                   fieldName="INSTANCE" language="Mermaid" extensions="mmd;mermaid" order="first"/>
+        <!-- language/filetype values renamed from "Mermaid" to
+             "MermaidCompanion": JetBrains bundles native Mermaid support
+             (com.intellij.mermaid) as of IU-262.9437.65 using the same
+             "Mermaid" Language ID, which crashed plugin load via
+             ImplementationConflictException the moment both are
+             installed together (confirmed by JetBrains's own External
+             Plugins Checker Tests, TeamCity build #369805). -->
+        <fileType name="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidFileType"
+                   fieldName="INSTANCE" language="MermaidCompanion" extensions="mmd;mermaid" order="first"/>
         <fileTypeDetector implementation="dev.gaphunter.mermaidcompanion.detection.MermaidFileTypeOverrider"/>
-        <lang.parserDefinition language="Mermaid"
+        <lang.parserDefinition language="MermaidCompanion"
                                 implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidParserDefinition"/>
-        <lang.syntaxHighlighterFactory language="Mermaid"
+        <lang.syntaxHighlighterFactory language="MermaidCompanion"
                                         implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidSyntaxHighlighterFactory"/>
-        <editorHighlighterProvider filetype="Mermaid"
+        <editorHighlighterProvider filetype="MermaidCompanion"
                                     implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidEditorHighlighterProvider"/>
-        <annotator language="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
-        <annotator language="Mermaid" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
+        <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
+        <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
         <fileEditorProvider implementation="dev.gaphunter.mermaidcompanion.preview.MermaidPreviewFileEditorProvider"/>
     </extensions>
 </idea-plugin>

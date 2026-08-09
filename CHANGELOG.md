@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-09
+
+### Fixed
+
+- Plugin crashed on load in IntelliJ 2026.2+ (build 262.9437.65 and
+  newer): JetBrains now bundles native Mermaid support using the same
+  `Mermaid` Language ID this plugin used, causing an
+  `ImplementationConflictException` the moment both were installed
+  together. The internal Language ID (and matching FileType name) is
+  now `MermaidCompanion` — no user-visible change (file associations,
+  extensions, and the Preview tab all work exactly as before).
+
 ## [0.1.1]
 
 ### Added
@@ -20,7 +32,8 @@
 - Preview showing blank on first open: now waits for the `JBCefBrowser`
   page load to finish before executing the render script.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...HEAD
+[0.1.2]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.0...0.1.1
 
 ## [0.1.0]
