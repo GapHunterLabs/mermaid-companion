@@ -66,7 +66,7 @@ flagged as real errors. Click the "Preview" tab for a live rendered view.
 ## Enterprise / Team Licensing
 
 Need enterprise features, custom rules, or team licensing? Contact us at
-**kennyj.diazm@gmail.com**.
+**gaphunterlabs@gmail.com**.
 
 ## Development
 
