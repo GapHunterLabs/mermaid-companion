@@ -32,10 +32,6 @@
 - Preview showing blank on first open: now waits for the `JBCefBrowser`
   page load to finish before executing the render script.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...HEAD
-[0.1.2]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...0.1.2
-[0.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.0...0.1.1
-
 ## [0.1.0]
 
 ### Added
@@ -48,5 +44,7 @@
   unmatched/mismatched node-shape brackets, and `subgraph` blocks missing
   their `end`.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...HEAD
+[0.1.2]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/GapHunterLabs/mermaid-companion/commits/0.1.0
