@@ -12,7 +12,7 @@ class MermaidPreviewFileEditorProvider : FileEditorProvider, DumbAware {
 
     override fun accept(project: Project, file: VirtualFile): Boolean = MermaidFileDetector.isMermaidFile(file.name)
 
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor = MermaidPreviewFileEditor(file)
+    override fun createEditor(project: Project, file: VirtualFile): FileEditor = MermaidPreviewFileEditor(project, file)
 
     override fun getEditorTypeId(): String = "mermaid-companion-preview"
 

@@ -7,6 +7,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import dev.gaphunter.mermaidcompanion.inspection.MermaidSyntaxChecker
+import dev.gaphunter.mermaidcompanion.review.ReviewPrompt
 
 /** Runs [MermaidSyntaxChecker] once per file (guarded on `element is
  * PsiFile`, since the check is whole-file, not per-token) and turns each
@@ -18,6 +19,8 @@ class MermaidSyntaxAnnotator : Annotator {
             holder.newAnnotation(HighlightSeverity.ERROR, issue.message)
                 .range(TextRange(issue.offset, issue.offset + issue.length))
                 .create()
+            val lineNumber = element.viewProvider.document?.getLineNumber(issue.offset)?.plus(1) ?: 0
+            ReviewPrompt.recordHit(element.project, "${element.virtualFile?.path}:$lineNumber:${issue.message}")
         }
     }
 }

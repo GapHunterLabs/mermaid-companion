@@ -7,11 +7,13 @@ import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.util.Alarm
+import dev.gaphunter.mermaidcompanion.review.ReviewPrompt
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -37,7 +39,7 @@ private const val DEBOUNCE_MS = 300
  * construction and logged, since this is genuinely environment-
  * dependent.
  */
-class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
+class MermaidPreviewFileEditor(private val project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
 
     private val panel = JPanel(BorderLayout())
     private val document: Document? = FileDocumentManager.getInstance().getDocument(file)
@@ -100,6 +102,10 @@ class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBa
         val escaped = MermaidJsEscaper.escapeForTemplateLiteral(text)
         val cefBrowser = activeBrowser.cefBrowser
         cefBrowser.executeJavaScript("window.gapHunterRenderMermaid(`$escaped`);", cefBrowser.url, 0)
+        // Real render only -- never fires for a null document or before the
+        // preview page has actually finished loading. Already debounced by
+        // the Alarm above (documentChanged), so this doesn't fire per keystroke.
+        if (text.isNotBlank()) ReviewPrompt.recordHit(project)
     }
 
     private fun shellHtml(): String {

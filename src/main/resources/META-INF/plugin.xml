@@ -27,6 +27,7 @@
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <notificationGroup id="Mermaid Companion" displayType="BALLOON"/>
         <!-- language/filetype values renamed from "Mermaid" to
              "MermaidCompanion": JetBrains bundles native Mermaid support
              (com.intellij.mermaid) as of IU-262.9437.65 using the same

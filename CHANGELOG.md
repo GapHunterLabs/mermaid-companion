@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [0.1.3]
+
+### Added
+
+- Review/star CTA: after 10 distinct real signals of use -- either a
+  real syntax error found by the annotator, or a successful diagram
+  render in the Preview tab -- a one-time notification asks whether to
+  rate the plugin on Marketplace, with a permanent "Don't ask again"
+  option.
+
 ## [0.1.2] - 2026-08-09
 
 ### Fixed
@@ -44,7 +54,8 @@
   unmatched/mismatched node-shape brackets, and `subgraph` blocks missing
   their `end`.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.3...HEAD
+[0.1.3]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/GapHunterLabs/mermaid-companion/commits/0.1.0
