@@ -35,7 +35,7 @@ private const val DEBOUNCE_MS = 300
  * Gracefully degrades if JCEF isn't supported in this IDE build/
  * environment -- `JBCefApp.isSupported()` is checked once at
  * construction and logged, since this is genuinely environment-
- * dependent (see INTELLIJ_PLATFORM_KNOWLEDGE.md section G).
+ * dependent.
  */
 class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
 
@@ -72,8 +72,8 @@ class MermaidPreviewFileEditor(private val file: VirtualFile) : UserDataHolderBa
         panel.add(newBrowser.component, BorderLayout.CENTER)
 
         // Debounced re-render, never on every keystroke -- same "heavy
-        // work never blocks typing" spirit as CONSTITUTION.md S6's first
-        // rule, applied to a JS render call instead of a pooled thread.
+        // work never blocks typing" principle applied catalog-wide,
+        // applied here to a JS render call instead of a pooled thread.
         val alarm = Alarm(Alarm.ThreadToUse.SWING_THREAD, newBrowser)
         document?.addDocumentListener(object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) {

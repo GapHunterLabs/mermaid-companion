@@ -9,8 +9,8 @@ import javax.swing.Icon
 /**
  * Implements [FileTypeIdentifiableByVirtualFile] + `order="first"` in
  * plugin.xml proactively, same defensive call already made in
- * cmake-companion -- see SDK_GOTCHAS.md SS10 for the real 5-round
- * investigation (nginx-companion) that first uncovered this race against
+ * cmake-companion -- a real 5-round investigation (nginx-companion)
+ * first uncovered this race against
  * bundled `FileTypeIdentifiableByVirtualFile` implementations.
  */
 object MermaidFileType : LanguageFileType(MermaidLanguage), FileTypeIdentifiableByVirtualFile {

@@ -6,9 +6,9 @@ import com.intellij.openapi.util.io.ByteSequence
 import com.intellij.openapi.vfs.VirtualFile
 import dev.gaphunter.mermaidcompanion.lang.MermaidFileType
 
-/** Lowest-priority-tier fallback; [MermaidFileType.isMyFileType] (tier 1,
- * see SDK_GOTCHAS.md SS10) is what actually wins the race against bundled
- * file types in practice. Registered for defense in depth only. */
+/** Lowest-priority-tier fallback; [MermaidFileType.isMyFileType] (tier 1)
+ * is what actually wins the race against bundled file types in
+ * practice. Registered for defense in depth only. */
 class MermaidFileTypeOverrider : FileTypeRegistry.FileTypeDetector {
     override fun detect(file: VirtualFile, firstBytes: ByteSequence, firstCharsIfText: CharSequence?): FileType? =
         if (MermaidFileDetector.isMermaidFile(file.name)) MermaidFileType else null
