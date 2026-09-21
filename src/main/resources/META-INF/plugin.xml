@@ -33,6 +33,12 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <!-- IntelliJ IDEA 2026.2 moved JCEF out of the core into the bundled
+         "Web Browser (JCEF)" plugin: without this dependency the preview's
+         JBCefApp isn't visible to this plugin (NoClassDefFoundError, seen
+         in a real 2026.2.3 sandbox). Optional because 2024.3-2025.2 have no
+         such id; JCEF is plain core API there. -->
+    <depends optional="true" config-file="mermaid-companion-jcef.xml">com.intellij.modules.jcef</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup id="Mermaid Companion" displayType="BALLOON"/>

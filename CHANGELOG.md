@@ -32,6 +32,16 @@
 
 ### Fixed
 
+- On IntelliJ IDEA 2026.2 and later the Preview tab didn't open at all:
+  2026.2 moved the embedded browser (JCEF) into its own bundled plugin,
+  which Mermaid Companion now declares as a dependency. If the embedded
+  browser still can't be reached, the tab now shows a message instead of
+  silently not appearing.
+- Opening a .mmd file could freeze the IDE for several seconds: the
+  preview's embedded browser was started, and mermaid.js read, as soon as
+  the file opened, even with the Text tab in front. The browser now starts
+  the first time you open the Preview tab, and mermaid.js is read in the
+  background.
 - The README said the preview needed no custom pan/zoom because
   "mermaid.js already has its own". It doesn't -- the preview had no zoom
   or pan at all until this release.

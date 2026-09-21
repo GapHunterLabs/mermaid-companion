@@ -59,8 +59,8 @@ private const val ZOOM_STEP = 1.25
  * this plugin's (see EditorOwnership).
  *
  * Gracefully degrades if JCEF isn't supported in this IDE build/
- * environment -- `JBCefApp.isSupported()` is checked once at
- * construction and logged, since this is genuinely environment-
+ * environment -- `JBCefApp.isSupported()` is checked once, the first time
+ * the tab is shown, and logged, since this is genuinely environment-
  * dependent.
  */
 class MermaidPreviewFileEditor(private val project: Project, private val file: VirtualFile) : UserDataHolderBase(), FileEditor {
@@ -80,8 +80,22 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
     @Volatile
     private var pageLoaded = false
 
+    private var initialized = false
+
     init {
-        val supported = JBCefApp.isSupported()
+        // Nothing heavy here: the platform builds every editor of a file on
+        // the UI thread when the file opens, Text tab included. Starting
+        // Chromium and reading the ~3 MB mermaid.js at that point froze the
+        // UI for 17 s on IntelliJ IDEA 2026.2 (the IDE's freeze report named
+        // this plugin). The browser is created the first time the Preview
+        // tab is shown; the script is read on a background thread meanwhile.
+        ApplicationManager.getApplication().executeOnPooledThread { MermaidBundle.scriptContent }
+    }
+
+    override fun selectNotify() {
+        if (initialized) return
+        initialized = true
+        val supported = jcefAvailable()
         thisLogger().info("Mermaid Companion preview: JBCefApp.isSupported()=$supported")
         if (supported) {
             setUpBrowser()
@@ -91,16 +105,31 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 BorderLayout.CENTER,
             )
         }
+        panel.revalidate()
+    }
+
+    /**
+     * Also false when JCEF's classes can't be reached from this plugin at
+     * all -- a LinkageError, as on IntelliJ IDEA 2026.2 before JCEF was
+     * declared as a dependency -- so the tab shows the message below
+     * instead of failing to open.
+     */
+    private fun jcefAvailable(): Boolean = try {
+        JBCefApp.isSupported()
+    } catch (e: LinkageError) {
+        thisLogger().warn("Mermaid Companion preview: JCEF classes aren't available to this plugin", e)
+        false
     }
 
     private fun setUpBrowser() {
         val newBrowser = JBCefBrowser()
         browser = newBrowser
-        panel.add(createToolbar(), BorderLayout.NORTH)
-        panel.add(newBrowser.component, BorderLayout.CENTER)
 
-        // Messages from the page (exports, zoom level). Created before the
-        // page loads, as JBCefJSQuery requires.
+        // Messages from the page (exports, zoom level). JBCefJSQuery has to
+        // exist before Chromium starts, and Chromium starts as soon as the
+        // browser's component joins a visible panel -- which the Preview tab
+        // already is by now -- so the component is added last, below.
+        // (Adding it first left window.cefQuery_* undefined in the page.)
         val bridge = JBCefJSQuery.create(newBrowser as JBCefBrowserBase)
         bridge.addHandler { payload ->
             BridgeMessage.parse(payload)?.let { message ->
@@ -130,7 +159,17 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             }
         }, newBrowser.cefBrowser)
 
-        newBrowser.loadHTML(PreviewPage.html(MermaidBundle.scriptContent, PreviewPage.companionScript))
+        panel.add(createToolbar(), BorderLayout.NORTH)
+        panel.add(newBrowser.component, BorderLayout.CENTER)
+
+        // The page inlines mermaid.js; build it off the UI thread (the
+        // script may still be loading) and hand it to the browser after.
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val html = PreviewPage.html(MermaidBundle.scriptContent, PreviewPage.companionScript)
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed && browser === newBrowser) newBrowser.loadHTML(html)
+            }
+        }
     }
 
     private fun js(code: String) {
@@ -247,5 +286,6 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
     // (JBCefJSQuery registers itself as a child of the browser).
     override fun dispose() {
         browser?.dispose()
+        browser = null
     }
 }
