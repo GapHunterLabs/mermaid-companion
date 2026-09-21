@@ -19,9 +19,17 @@
         <p>A "Preview" tab renders the diagram visually via the real
         mermaid.js (bundled), next to the text editor -- the direct fix for
         that same review ("It opens and shows me a bunch of icons on page.
-        That's it. No other functionality at all."). If this IDE build
-        doesn't support embedded browser rendering, the tab shows a plain
-        message instead; everything else in the plugin is unaffected.</p>
+        That's it. No other functionality at all."). The preview zooms and
+        pans (Ctrl+mouse wheel or pinch to zoom, drag or scroll to pan,
+        fit and 100% buttons), switches diagram theme independently of the
+        editor theme (a light, printable diagram in a dark IDE), and
+        exports the diagram as SVG or PNG. If this IDE build doesn't
+        support embedded browser rendering, the tab shows a plain message
+        instead; everything else in the plugin is unaffected.</p>
+        <p>Works alongside JetBrains's own Mermaid plugin (bundled with
+        IntelliJ IDEA from 2026.2): when both are installed, you're asked
+        once which editor should own .mmd/.mermaid files, and the Preview
+        tab stays available with either one.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -37,7 +45,6 @@
              Plugins Checker Tests, TeamCity build #369805). -->
         <fileType name="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidFileType"
                    fieldName="INSTANCE" language="MermaidCompanion" extensions="mmd;mermaid" order="first"/>
-        <fileTypeDetector implementation="dev.gaphunter.mermaidcompanion.detection.MermaidFileTypeOverrider"/>
         <lang.parserDefinition language="MermaidCompanion"
                                 implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidParserDefinition"/>
         <lang.syntaxHighlighterFactory language="MermaidCompanion"
@@ -47,5 +54,21 @@
         <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
         <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
         <fileEditorProvider implementation="dev.gaphunter.mermaidcompanion.preview.MermaidPreviewFileEditorProvider"/>
+        <postStartupActivity implementation="dev.gaphunter.mermaidcompanion.coexistence.CoexistenceStartupActivity"/>
     </extensions>
+
+    <actions>
+        <action id="MermaidCompanion.UseJetBrainsEditor"
+                class="dev.gaphunter.mermaidcompanion.coexistence.UseJetBrainsMermaidEditorAction"
+                text="Edit Mermaid Files with JetBrains Mermaid Editor"
+                description="Hand .mmd/.mermaid editing to JetBrains's Mermaid plugin; the Mermaid Companion Preview tab stays available">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+        <action id="MermaidCompanion.UseCompanionEditor"
+                class="dev.gaphunter.mermaidcompanion.coexistence.UseCompanionMermaidEditorAction"
+                text="Edit Mermaid Files with Mermaid Companion"
+                description="Take .mmd/.mermaid editing back into Mermaid Companion">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
+    </actions>
 </idea-plugin>

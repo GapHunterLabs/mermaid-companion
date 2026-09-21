@@ -1,0 +1,29 @@
+%% Switch the diagram theme from the Preview toolbar (Neutral is meant for
+%% printing), then export it as SVG or PNG -- the file is suggested next to
+%% this one as printable-classes.svg / printable-classes.png.
+classDiagram
+    class Order {
+        +String id
+        +List~OrderLine~ lines
+        +Money total()
+        +place()
+    }
+    class OrderLine {
+        +String sku
+        +int quantity
+        +Money price
+    }
+    class Money {
+        +long amountMinor
+        +String currency
+    }
+    class Payment {
+        +String orderId
+        +Money amount
+        +capture()
+    }
+    Order "1" *-- "many" OrderLine
+    OrderLine --> Money
+    Order --> Money
+    Payment --> Money
+    Payment ..> Order : pays for

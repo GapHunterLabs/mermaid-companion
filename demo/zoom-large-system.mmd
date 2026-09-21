@@ -1,0 +1,39 @@
+%% A diagram too big to read at the default size: open the Preview tab and
+%% try Ctrl+mouse wheel (or pinch) to zoom around the cursor, drag or scroll
+%% to pan, double-click or the "Fit" button to see it whole, and "100%".
+flowchart LR
+    subgraph Edge
+        cdn[CDN] --> waf[WAF] --> lb[Load balancer]
+    end
+    subgraph Services
+        lb --> gw[API gateway]
+        gw --> auth[Auth service]
+        gw --> orders[Orders service]
+        gw --> catalog[Catalog service]
+        gw --> search[Search service]
+        gw --> payments[Payments service]
+        gw --> shipping[Shipping service]
+        gw --> notify[Notification service]
+    end
+    subgraph Data
+        orders --> ordersdb[(Orders DB)]
+        catalog --> catalogdb[(Catalog DB)]
+        search --> index[(Search index)]
+        payments --> ledger[(Ledger)]
+        shipping --> shipdb[(Shipments DB)]
+        auth --> users[(Users DB)]
+    end
+    subgraph Async
+        orders -- OrderPlaced --> bus{{Event bus}}
+        payments -- PaymentCaptured --> bus
+        shipping -- ShipmentSent --> bus
+        bus --> notify
+        bus --> analytics[Analytics pipeline]
+        analytics --> warehouse[(Data warehouse)]
+    end
+    subgraph External
+        payments --> psp[Payment provider]
+        shipping --> carrier[Carrier API]
+        notify --> email[Email provider]
+        notify --> sms[SMS provider]
+    end

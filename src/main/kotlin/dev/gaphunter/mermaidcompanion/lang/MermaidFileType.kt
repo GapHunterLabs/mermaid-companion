@@ -3,6 +3,7 @@ package dev.gaphunter.mermaidcompanion.lang
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.fileTypes.ex.FileTypeIdentifiableByVirtualFile
 import com.intellij.openapi.vfs.VirtualFile
+import dev.gaphunter.mermaidcompanion.coexistence.EditorOwnership
 import dev.gaphunter.mermaidcompanion.detection.MermaidFileDetector
 import javax.swing.Icon
 
@@ -23,5 +24,9 @@ object MermaidFileType : LanguageFileType(MermaidLanguage), FileTypeIdentifiable
     override fun getDefaultExtension(): String = "mmd"
     override fun getIcon(): Icon? = null
 
-    override fun isMyFileType(file: VirtualFile): Boolean = MermaidFileDetector.isMermaidFile(file.name)
+    // Name check first: it's the cheap part, and this runs for every file.
+    // Once the user has handed Mermaid editing to JetBrains's own editor
+    // (EditorOwnership), stop claiming these files.
+    override fun isMyFileType(file: VirtualFile): Boolean =
+        MermaidFileDetector.isMermaidFile(file.name) && !EditorOwnership.defersToNative()
 }

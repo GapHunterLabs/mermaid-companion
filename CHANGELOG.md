@@ -4,6 +4,38 @@
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+
+- Zoom and pan in the Preview tab: Ctrl+mouse wheel (or trackpad pinch)
+  zooms around the cursor, dragging or scrolling pans, double-click or
+  "Fit Diagram" shows the whole diagram, and "Actual Size" goes back to
+  100%. The current zoom level is shown in the toolbar, and editing the
+  diagram keeps your zoom and position.
+- Diagram theme picker in the Preview toolbar -- Default, Neutral
+  (printable), Forest, Dark -- independent of the IDE's editor theme,
+  remembered across sessions.
+- Export the rendered diagram as SVG or PNG (2x resolution), saved next to
+  the source file by default.
+- A diagram that stops parsing while you type no longer blanks the
+  preview: the last good render stays on screen, with the error shown
+  above it.
+- Works alongside JetBrains's own Mermaid plugin (bundled with IntelliJ
+  IDEA from 2026.2). When both are installed, the platform gives
+  .mmd/.mermaid files to this plugin, which can hide the bundled editor's
+  completion, formatting and rename. Mermaid Companion now asks once which
+  editor should own those files; nothing changes without your click, and
+  Tools | "Edit Mermaid Files with ..." switches back and forth at any
+  time. The Preview tab (zoom, themes, export) stays available with either
+  editor.
+
+### Fixed
+
+- The README said the preview needed no custom pan/zoom because
+  "mermaid.js already has its own". It doesn't -- the preview had no zoom
+  or pan at all until this release.
+
 ## [0.1.3]
 
 ### Added
@@ -54,7 +86,8 @@
   unmatched/mismatched node-shape brackets, and `subgraph` blocks missing
   their `end`.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.3...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.3...0.2.0
 [0.1.3]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.0...0.1.1

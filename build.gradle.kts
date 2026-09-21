@@ -1,3 +1,4 @@
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 
@@ -63,5 +64,18 @@ intellijPlatform {
         certificateChain.set(providers.gradleProperty("gapHunterLabs.marketplace.certificateChain"))
         privateKey.set(providers.gradleProperty("gapHunterLabs.marketplace.privateKey"))
         password.set(providers.gradleProperty("gapHunterLabs.marketplace.privateKeyPassword"))
+    }
+}
+
+// Manual coexistence check: IntelliJ IDEA 2026.2 bundles JetBrains's own
+// Mermaid plugin, which the default runIde IDE (2025.2) doesn't have.
+// `./gradlew runIdeWithBundledMermaid` starts that IDE with this plugin
+// installed next to it.
+intellijPlatformTesting {
+    runIde {
+        register("runIdeWithBundledMermaid") {
+            type = IntelliJPlatformType.IntellijIdea
+            version = "2026.2.3"
+        }
     }
 }

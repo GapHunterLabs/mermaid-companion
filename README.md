@@ -52,8 +52,25 @@ paid, vendor Tachi Labs. Real, verbatim reviewer complaints:
   IDE build doesn't support JCEF, the tab shows a plain fallback message
   instead -- the rest of the plugin (highlighting, validation) is
   completely unaffected either way.
-- **v1 scope cuts, deliberate:** no custom pan/zoom (mermaid.js already
-  has its own); no PNG/SVG export button.
+- **Zoom, pan, themes and export where reviewers of the bundled plugin
+  keep asking for them.** JetBrains's own Mermaid plugin (1.6M+ downloads,
+  bundled with IntelliJ IDEA from 2026.2) is a much richer *editor*, but
+  its Marketplace reviews through August 2026 repeatedly ask for preview
+  zoom/pan ("Please can we add zoom to this... Ctrl + mouse scroll doesn't
+  work either"), a diagram theme independent of the editor theme ("dark
+  editor theme but want to create a printable mermaid diagram"), and
+  export. This preview does all three. The zoom/pan math lives in
+  `resources/preview/companion-preview.js` as pure functions, unit-tested
+  in Node (`PreviewScriptTest`).
+- **Coexistence instead of a silent takeover.** When two plugins claim the
+  same extension, the platform gives it to the one the user installed --
+  so without care, this plugin would take `.mmd`/`.mermaid` away from the
+  bundled editor. Instead it asks once, changes nothing without a click,
+  and keeps its Preview tab available with either editor (it opens by file
+  name, not file type).
+- **Earlier README claim corrected:** it said v1 had no custom pan/zoom
+  because "mermaid.js already has its own". It doesn't; the preview had
+  none until 0.2.0.
 
 ## Usage
 
@@ -61,7 +78,20 @@ Open a `.mmd`/`.mermaid` file. Structural keywords (`flowchart`,
 `subgraph`, `end`, `sequenceDiagram`, `classDiagram`, etc.) and node-shape
 delimiters, strings, and comments get their own colors; unterminated
 strings, unmatched/mismatched brackets, and subgraphs missing `end` are
-flagged as real errors. Click the "Preview" tab for a live rendered view.
+flagged as real errors. Click the "Preview" tab for a live rendered view:
+
+- **Zoom:** Ctrl+mouse wheel or trackpad pinch (around the cursor), or the
+  toolbar's zoom buttons. **Pan:** drag, or scroll. **Fit:** double-click
+  or "Fit Diagram". **100%:** "Actual Size".
+- **Theme:** the palette button -- Default, Neutral (printable), Forest,
+  Dark -- independent of the IDE theme.
+- **Export:** SVG or PNG (2x). Some diagram types can't be rasterized in
+  the browser; PNG export then says so, and SVG always works.
+
+If JetBrains's Mermaid plugin is also installed (it's bundled with
+IntelliJ IDEA from 2026.2), you're asked once which editor should own
+`.mmd`/`.mermaid` files. Switch any time from Tools | "Edit Mermaid Files
+with JetBrains Mermaid Editor" / "... with Mermaid Companion".
 
 ## Enterprise / Team Licensing
 
