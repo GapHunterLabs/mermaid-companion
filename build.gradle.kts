@@ -79,3 +79,10 @@ intellijPlatformTesting {
         }
     }
 }
+
+// Local testing of the Pro features: a sandbox IDE has no Marketplace
+// license. The property is honored only when the IDE's configuration folder
+// is a Gradle sandbox (see DevSandbox), never in an installed IDE.
+tasks.withType<JavaExec>().matching { it.name.startsWith("runIde") }.configureEach {
+    jvmArgs("-Dmermaidcompanion.pro.dev=true")
+}
