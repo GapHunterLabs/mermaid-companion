@@ -35,18 +35,16 @@ import java.util.Base64
  * free before stays free. Callers must treat null (LicensingFacade not
  * initialized yet) as NOT licensed -- see ProGate.
  *
- * PRODUCT_CODE stays [PENDING_PRODUCT_CODE] until JetBrains Marketplace
- * assigns the real code on enrolling this plugin in the Freemium pricing
- * model. With the placeholder the platform returns no confirmation stamp,
- * so every Pro feature is closed -- the safe state. The real code goes here
- * and in the matching <product-descriptor> in plugin.xml in the same
- * commit (LicenseWiringTest checks they agree).
+ * PRODUCT_CODE is the code Marketplace assigned when this plugin was
+ * enrolled in the Freemium pricing model. The matching <product-descriptor>
+ * in plugin.xml has to carry the same value; ProGateTest fails if they
+ * ever disagree.
  */
 object CheckLicense {
-    /** Not a real Marketplace code: no stamp exists for it, so [isLicensed] is false. */
+    /** A value no license can match; only what ProGateTest expects while there is no descriptor. */
     const val PENDING_PRODUCT_CODE = "PENDING-MARKETPLACE-PRODUCT-CODE"
 
-    const val PRODUCT_CODE = PENDING_PRODUCT_CODE
+    const val PRODUCT_CODE = "PMERMAIDCOMPANI"
 
     private const val KEY_PREFIX = "key:"
     private const val STAMP_PREFIX = "stamp:"

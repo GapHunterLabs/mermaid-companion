@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [2026.1.0]
+
 ### Added
 
 - **Mermaid Companion Pro** (optional paid tier; everything that was free
@@ -13,6 +15,17 @@
   leaves the existing exports untouched, and an unchanged diagram leaves
   the files alone. "Sync Now" in the Preview toolbar updates them on
   demand.
+
+### Fixed
+
+- Review/star CTA now links to this plugin's own Marketplace reviews page
+  instead of the vendor's generic plugin list.
+- A diagram that doesn't parse no longer leaves mermaid's own "Syntax error"
+  graphic behind in the Preview -- one more for every pause while typing an
+  invalid diagram. The error is shown in the bar above the last good render,
+  as before.
+- The Export on Save message ("Turn on SVG or PNG first", "Pro feature") no
+  longer stays in the toolbar after you turn a format on or off.
 
 ## [0.2.0]
 
@@ -106,7 +119,8 @@
   unmatched/mismatched node-shape brackets, and `subgraph` blocks missing
   their `end`.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.0...HEAD
+[2026.1.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.2.0...2026.1.0
 [0.2.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.3...0.2.0
 [0.1.3]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.1...0.1.2

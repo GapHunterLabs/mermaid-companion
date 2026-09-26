@@ -3,6 +3,14 @@
     <id>dev.gaphunter.mermaidcompanion</id>
     <name>Mermaid Companion</name>
     <vendor>Gap Hunter Labs</vendor>
+    <!-- Freemium: optional="true" keeps the plugin installable and usable with
+         no license at all; only the Pro features gate on CheckLicense.isLicensed().
+         release-version shares its leading digits with the plugin's own version
+         (20261 pairs with 2026.1.x). The version scheme moves from semver (0.2.x)
+         to 2026.1.0 with this release.
+         Do not use a literal double hyphen anywhere in this comment, the XML
+         spec forbids it inside comments and patchPluginXml will crash. -->
+    <product-descriptor code="PMERMAIDCOMPANI" release-date="20260926" release-version="20261" optional="true"/>
     <description><![CDATA[
         <p>Syntax highlighting and real validation for .mmd/.mermaid
         diagram source files (flowchart, sequence, and class diagrams): a
