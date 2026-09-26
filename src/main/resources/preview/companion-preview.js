@@ -127,8 +127,22 @@
         errorBar.style.display = message ? 'block' : 'none';
     }
 
+    /*
+     * A render that fails must show nothing of its own. By default mermaid draws
+     * its "Syntax error in text" bomb into the page and leaves it there, one more
+     * for every failed render (every pause while typing an invalid diagram); the
+     * error is reported through the error bar instead. discardStray removes the
+     * scratch element mermaid may leave behind ("d" + the render id).
+     */
+    function discardStray(renderId) {
+        var stray = document.getElementById('d' + renderId);
+        if (stray && typeof stray.remove === 'function') {
+            stray.remove();
+        }
+    }
+
     function initializeMermaid(extra) {
-        var config = { startOnLoad: false, theme: theme };
+        var config = { startOnLoad: false, theme: theme, suppressErrorRendering: true };
         for (var key in (extra || {})) {
             config[key] = extra[key];
         }
@@ -147,7 +161,8 @@
         var seq = ++renderSeq;
         document.body.style.background = background();
         initializeMermaid();
-        root.mermaid.render('gap-hunter-mermaid-svg-' + seq, text).then(function (result) {
+        var renderId = 'gap-hunter-mermaid-svg-' + seq;
+        root.mermaid.render(renderId, text).then(function (result) {
             if (seq !== renderSeq) {
                 if (tag) {
                     send('rendersuperseded:' + tag);
@@ -171,6 +186,7 @@
             }
         }).catch(function (err) {
             // Keep the last good diagram on screen; show why the new one failed.
+            discardStray(renderId);
             var message = (err && err.message) || String(err);
             if (seq !== renderSeq) {
                 if (tag) {
@@ -243,7 +259,8 @@
         }
         var seq = ++exportSeq;
         initializeMermaid({ htmlLabels: false, flowchart: { htmlLabels: false } });
-        root.mermaid.render('gap-hunter-mermaid-png-' + seq, lastText).then(function (result) {
+        var pngId = 'gap-hunter-mermaid-png-' + seq;
+        root.mermaid.render(pngId, lastText).then(function (result) {
             initializeMermaid();
             var holder = document.createElement('div');
             holder.innerHTML = result.svg;
@@ -272,6 +289,7 @@
             };
             img.src = 'data:image/svg+xml;base64,' + btoa(bytes);
         }).catch(function (err) {
+            discardStray(pngId);
             initializeMermaid();
             out(mode, 'error', 'PNG export failed: ' + ((err && err.message) || err));
         });

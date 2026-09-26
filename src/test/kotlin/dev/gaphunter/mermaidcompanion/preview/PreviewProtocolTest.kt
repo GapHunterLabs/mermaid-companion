@@ -78,15 +78,17 @@ class PreviewProtocolTest {
             function loadPage() {
                 const sent = [];
                 const pending = [];
+                const configs = [];
+                const strays = {};
                 const els = { viewport: makeEl('viewport'), stage: makeEl('stage'), error: makeEl('error') };
                 const sandbox = {
                     document: {
                         body: { style: {} },
-                        getElementById(id) { return els[id]; },
+                        getElementById(id) { return els[id] || strays[id] || null; },
                         createElement() { return makeEl('x'); }
                     },
                     mermaid: {
-                        initialize() {},
+                        initialize(config) { configs.push(config); },
                         render(id, text) { return new Promise((resolve, reject) => pending.push({ id, text, resolve, reject })); }
                     },
                     XMLSerializer: class { serializeToString(n) { return '<svg xmlns="http://www.w3.org/2000/svg">' + n._markup + '</svg>'; } },
@@ -98,7 +100,7 @@ class PreviewProtocolTest {
                 vm.createContext(sandbox);
                 vm.runInContext(code, sandbox);
                 return {
-                    root: sandbox, els, pending,
+                    root: sandbox, els, pending, configs, strays,
                     // Everything the page told the plugin except the constant zoom chatter.
                     messages() { return sent.filter((m) => m.indexOf('zoom:') !== 0); },
                     clear() { sent.length = 0; }
@@ -173,6 +175,20 @@ class PreviewProtocolTest {
                 assert.ok(early[1].indexOf('error:Nothing to export yet') === 0, early[1]);
                 assert.ok(early[2].indexOf('syncerror:Nothing to export yet') === 0, early[2]);
                 assert.ok(early[3].indexOf('error:Nothing to export yet') === 0, early[3]);
+
+                // 7. A failed render must leave nothing of mermaid's own error graphic in the page: mermaid is
+                //    told not to draw it, and the scratch element it may leave behind ("d" + render id) is removed.
+                page = loadPage();
+                let removed = false;
+                const stray = makeEl('stray');
+                stray.remove = () => { removed = true; };
+                page.root.gapHunterRender('broken', 10);
+                page.strays['dgap-hunter-mermaid-svg-1'] = stray;
+                page.pending[0].reject(new Error('Parse error'));
+                await tick();
+                assert.ok(removed, 'the scratch element left by a failed render is removed');
+                assert.ok(page.configs.length > 0, 'mermaid was configured');
+                assert.ok(page.configs.every((c) => c.suppressErrorRendering === true), 'mermaid never draws its own error graphic');
 
                 console.log('ALL OK');
             })().catch((e) => { console.log(e && e.stack || e); process.exit(1); });

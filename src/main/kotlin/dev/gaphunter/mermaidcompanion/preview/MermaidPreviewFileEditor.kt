@@ -398,6 +398,9 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 if (!confirmOverwrite()) return
             }
             settings.setEnabled(file.url, format, state)
+            // Whatever the toolbar said about an earlier attempt ("Turn on SVG or PNG
+            // first", "Pro feature") is out of date now; a sync in progress keeps its own.
+            if (!coordinator.isBusy) showSyncStatus(SyncStatus.Idle)
         }
 
         private fun confirmOverwrite(): Boolean {
