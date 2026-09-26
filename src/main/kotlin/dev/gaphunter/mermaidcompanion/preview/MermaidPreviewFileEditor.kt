@@ -16,11 +16,14 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.UserDataHolderBase
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
@@ -29,7 +32,16 @@ import com.intellij.ui.jcef.JBCefBrowser
 import com.intellij.ui.jcef.JBCefBrowserBase
 import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.Alarm
+import dev.gaphunter.mermaidcompanion.licensing.CheckLicense
+import dev.gaphunter.mermaidcompanion.licensing.ProGate
 import dev.gaphunter.mermaidcompanion.review.ReviewPrompt
+import dev.gaphunter.mermaidcompanion.sync.AutoSyncSettings
+import dev.gaphunter.mermaidcompanion.sync.ExportFormat
+import dev.gaphunter.mermaidcompanion.sync.SvgNormalizer
+import dev.gaphunter.mermaidcompanion.sync.SyncCoordinator
+import dev.gaphunter.mermaidcompanion.sync.SyncStatus
+import dev.gaphunter.mermaidcompanion.sync.SyncWriter
+import dev.gaphunter.mermaidcompanion.sync.WriteResult
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -37,6 +49,8 @@ import java.awt.BorderLayout
 import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.nio.file.Files
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -44,6 +58,7 @@ import javax.swing.SwingConstants
 
 private const val DEBOUNCE_MS = 300
 private const val ZOOM_STEP = 1.25
+private const val SYNC_TIMEOUT_MS = 20_000
 
 /**
  * A "Preview" tab next to the text editor (FileEditorPolicy.PLACE_AFTER_DEFAULT_EDITOR,
@@ -68,7 +83,22 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
     private val panel = JPanel(BorderLayout())
     private val document: Document? = FileDocumentManager.getInstance().getDocument(file)
     private val zoomLabel = JLabel("100%")
+    private val syncLabel = JLabel("")
     private var browser: JBCefBrowser? = null
+
+    // Pro: keep SVG/PNG exports in step with the diagram on every save.
+    private val settings = project.service<AutoSyncSettings>()
+    private var syncTimeout: Alarm? = null
+    private val coordinator = SyncCoordinator(
+        enabledFormats = { settings.enabledFormats(file.url) },
+        licensed = { ProGate.isOpen() },
+        requestRender = { token -> renderCurrentDocument(token) },
+        requestExport = { format ->
+            js(if (format == ExportFormat.SVG) "window.gapHunterExportSvg('sync');" else "window.gapHunterExportPng('sync');")
+        },
+        requestWrite = { format, bytes -> writeSyncExport(format, bytes) },
+        report = { status -> showSyncStatus(status) },
+    )
 
     // loadHTML() is fire-and-forget -- the shell page (and the
     // window.gapHunterRender function it defines) isn't actually
@@ -149,6 +179,19 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             }
         }, newBrowser)
 
+        syncTimeout = Alarm(Alarm.ThreadToUse.SWING_THREAD, newBrowser)
+
+        // Pro: a save of this file syncs its exports. Runs after the save has
+        // been handed off, never inside it, and does nothing unless the
+        // preview page is up (nothing to export from before that).
+        ApplicationManager.getApplication().messageBus.connect(newBrowser)
+            .subscribe(FileDocumentManagerListener.TOPIC, object : FileDocumentManagerListener {
+                override fun beforeDocumentSaving(savedDocument: Document) {
+                    if (savedDocument !== document || !pageLoaded) return
+                    ApplicationManager.getApplication().invokeLater { if (!project.isDisposed) coordinator.onSave() }
+                }
+            })
+
         newBrowser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
                 if (!frame.isMain) return
@@ -178,10 +221,12 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         cefBrowser.executeJavaScript(code, cefBrowser.url, 0)
     }
 
-    private fun renderCurrentDocument() {
+    /** [token] marks a render the sync flow asked for; its outcome is reported back under it. */
+    private fun renderCurrentDocument(token: Int? = null) {
         if (!pageLoaded) return
         val text = document?.text ?: return
-        js("window.gapHunterRender(`${MermaidJsEscaper.escapeForTemplateLiteral(text)}`);")
+        val tokenArgument = if (token != null) ", $token" else ""
+        js("window.gapHunterRender(`${MermaidJsEscaper.escapeForTemplateLiteral(text)}`$tokenArgument);")
         // Real render only -- never fires for a null document or before the
         // preview page has actually finished loading. Already debounced by
         // the Alarm above (documentChanged), so this doesn't fire per keystroke.
@@ -194,7 +239,66 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             is BridgeMessage.Svg -> save("svg", message.markup.toByteArray(Charsets.UTF_8))
             is BridgeMessage.Png -> save("png", message.bytes)
             is BridgeMessage.Failure -> notify(message.message, NotificationType.WARNING)
+            is BridgeMessage.Rendered -> coordinator.onRendered(message.token)
+            is BridgeMessage.RenderFailed -> coordinator.onRenderFailed(message.token, message.message)
+            is BridgeMessage.RenderSuperseded -> coordinator.onRenderSuperseded(message.token)
+            is BridgeMessage.SyncSvg -> coordinator.onExport(ExportFormat.SVG, SvgNormalizer.normalize(message.markup).toByteArray(Charsets.UTF_8))
+            is BridgeMessage.SyncPng -> coordinator.onExport(ExportFormat.PNG, message.bytes)
+            is BridgeMessage.SyncFailure -> coordinator.onExportFailed(message.message)
         }
+    }
+
+    /**
+     * Writes one export next to the source file, off the UI thread, then hands
+     * the outcome back to the sync flow on the UI thread.
+     */
+    private fun writeSyncExport(format: ExportFormat, bytes: ByteArray) {
+        val dir = try {
+            file.parent?.toNioPath()
+        } catch (e: UnsupportedOperationException) {
+            null
+        }
+        val target = dir?.let { SyncWriter.targetFor(it, file.name, format) }
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val result = if (target == null) {
+                WriteResult.Failed("This file isn't on the local disk, so its exports can't be written next to it.")
+            } else {
+                SyncWriter.write(target, bytes)
+            }
+            ApplicationManager.getApplication().invokeLater {
+                if (project.isDisposed) return@invokeLater
+                if (result is WriteResult.Written) LocalFileSystem.getInstance().refreshAndFindFileByNioFile(result.path)
+                coordinator.onWritten(format, result)
+            }
+        }
+    }
+
+    private fun showSyncStatus(status: SyncStatus) {
+        // A sync that never hears back from the page must not stay "syncing" forever.
+        syncTimeout?.cancelAllRequests()
+        if (status is SyncStatus.Syncing) syncTimeout?.addRequest({ coordinator.onTimeout() }, SYNC_TIMEOUT_MS)
+
+        val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+        when (status) {
+            SyncStatus.Idle -> setSyncLabel("", null)
+            SyncStatus.Syncing -> setSyncLabel("Syncing exports...", null)
+            is SyncStatus.Synced -> setSyncLabel(
+                "Exports synced $time",
+                if (status.written.isEmpty()) "Already up to date." else "Wrote: " + status.written.joinToString(", ") { it.fileName.toString() },
+            )
+            is SyncStatus.RenderFailed -> setSyncLabel("Exports not updated (diagram doesn't render)", status.message)
+            is SyncStatus.Failed -> {
+                setSyncLabel("Export failed", status.message)
+                notify(status.message, NotificationType.WARNING)
+            }
+            SyncStatus.NeedsLicense -> setSyncLabel("Pro feature", "Export on Save is part of Mermaid Companion Pro.")
+            SyncStatus.NothingEnabled -> setSyncLabel("Turn on SVG or PNG first", "Use Export on Save (Pro) in this toolbar.")
+        }
+    }
+
+    private fun setSyncLabel(text: String, tooltip: String?) {
+        syncLabel.text = text
+        syncLabel.toolTipText = tooltip
     }
 
     private fun save(extension: String, bytes: ByteArray) {
@@ -242,12 +346,27 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             })
             add(jsAction("Export as SVG", AllIcons.ToolbarDecorator.Export, "window.gapHunterExportSvg();"))
             add(jsAction("Export as PNG", AllIcons.FileTypes.Image, "window.gapHunterExportPng();"))
+            addSeparator()
+            add(DefaultActionGroup("Export on Save (Pro)", true).apply {
+                templatePresentation.icon = AllIcons.Actions.MenuSaveall
+                ExportFormat.entries.forEach { add(ExportOnSaveAction(it)) }
+                addSeparator()
+                add(SyncNowAction())
+            })
         }
         val toolbar = ActionManager.getInstance().createActionToolbar("MermaidCompanionPreview", group, true)
         toolbar.targetComponent = panel
         return JPanel(BorderLayout()).apply {
             add(toolbar.component, BorderLayout.CENTER)
-            add(zoomLabel.apply { border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8) }, BorderLayout.EAST)
+            add(
+                JPanel().apply {
+                    layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.X_AXIS)
+                    isOpaque = false
+                    add(syncLabel.apply { border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8) })
+                    add(zoomLabel.apply { border = javax.swing.BorderFactory.createEmptyBorder(0, 8, 0, 8) })
+                },
+                BorderLayout.EAST,
+            )
         }
     }
 
@@ -259,6 +378,54 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             }
             override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
         }
+
+    /**
+     * One "keep this export up to date on every save" switch. Turning it on
+     * needs the Pro license; without one the license dialog opens and the
+     * switch stays off. If the export file already exists it asks before it
+     * starts overwriting it on every save.
+     */
+    private inner class ExportOnSaveAction(private val format: ExportFormat) : ToggleAction(format.label) {
+        override fun isSelected(e: AnActionEvent): Boolean = settings.isEnabled(file.url, format)
+
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (state) {
+                if (!ProGate.isOpen()) {
+                    showSyncStatus(SyncStatus.NeedsLicense)
+                    CheckLicense.requestLicense("Export on Save keeps the ${format.label} export in step with your diagram every time you save. It is part of Mermaid Companion Pro.")
+                    return
+                }
+                if (!confirmOverwrite()) return
+            }
+            settings.setEnabled(file.url, format, state)
+        }
+
+        private fun confirmOverwrite(): Boolean {
+            val dir = try {
+                file.parent?.toNioPath()
+            } catch (e: UnsupportedOperationException) {
+                null
+            } ?: return true
+            val target = SyncWriter.targetFor(dir, file.name, format) ?: return true
+            if (!Files.exists(target)) return true
+            return Messages.showYesNoDialog(
+                project,
+                "${target.fileName} already exists next to this diagram. Overwrite it every time you save?",
+                "Export on Save",
+                Messages.getQuestionIcon(),
+            ) == Messages.YES
+        }
+
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class SyncNowAction : DumbAwareAction("Sync Now", "Update the enabled exports now", AllIcons.Actions.Refresh) {
+        override fun actionPerformed(e: AnActionEvent) = coordinator.onSyncNow()
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded && !coordinator.isBusy
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
 
     private inner class ThemeAction(private val theme: PreviewTheme) : ToggleAction(theme.displayName) {
         override fun isSelected(e: AnActionEvent): Boolean = PreviewTheme.current == theme

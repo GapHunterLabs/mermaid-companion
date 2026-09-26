@@ -81,6 +81,16 @@
         }
     }
 
+    /*
+     * Export answers. `mode === 'sync'` marks an export the plugin asked for
+     * itself (Export on Save): it comes back as syncsvg / syncpng / syncerror
+     * so it is written without a file dialog. Anything else is a manual
+     * export from the toolbar and keeps the save dialog.
+     */
+    function out(mode, kind, payload) {
+        send((mode === 'sync' ? 'sync' : '') + kind + ':' + payload);
+    }
+
     function apply() {
         stage.style.transform = 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.scale + ')';
         send('zoom:' + Math.round(view.scale * 100));
@@ -125,13 +135,23 @@
         root.mermaid.initialize(config);
     }
 
-    root.gapHunterRender = function (text) {
+    /*
+     * `token` is set only for a render the plugin asked for on purpose (Export
+     * on Save). Its outcome is reported back with that token: rendered,
+     * renderfailed, or rendersuperseded when a newer render replaced it before
+     * it finished -- so an unrelated (debounced) render is never mistaken for it.
+     */
+    root.gapHunterRender = function (text, token) {
         lastText = text;
+        var tag = token === undefined ? '' : String(token);
         var seq = ++renderSeq;
         document.body.style.background = background();
         initializeMermaid();
         root.mermaid.render('gap-hunter-mermaid-svg-' + seq, text).then(function (result) {
             if (seq !== renderSeq) {
+                if (tag) {
+                    send('rendersuperseded:' + tag);
+                }
                 return; // a newer render already started
             }
             stage.innerHTML = result.svg;
@@ -146,9 +166,22 @@
             } else {
                 apply();
             }
+            if (tag) {
+                send('rendered:' + tag);
+            }
         }).catch(function (err) {
             // Keep the last good diagram on screen; show why the new one failed.
-            setError('Diagram error: ' + ((err && err.message) || err));
+            var message = (err && err.message) || String(err);
+            if (seq !== renderSeq) {
+                if (tag) {
+                    send('rendersuperseded:' + tag);
+                }
+                return;
+            }
+            setError('Diagram error: ' + message);
+            if (tag) {
+                send('renderfailed:' + tag + ':' + message.replace(/\s+/g, ' '));
+            }
         });
     };
 
@@ -188,13 +221,13 @@
         return new XMLSerializer().serializeToString(clone);
     }
 
-    root.gapHunterExportSvg = function () {
+    root.gapHunterExportSvg = function (mode) {
         var svg = stage.querySelector('svg');
         if (!svg) {
-            send('error:Nothing to export yet -- the diagram has not rendered.');
+            out(mode, 'error', 'Nothing to export yet -- the diagram has not rendered.');
             return;
         }
-        send('svg:' + serialize(svg));
+        out(mode, 'svg', serialize(svg));
     };
 
     /*
@@ -203,9 +236,9 @@
      * exported, so the PNG is rendered separately with htmlLabels off. If a
      * diagram type still taints the canvas, report it instead of failing silently.
      */
-    root.gapHunterExportPng = function () {
+    root.gapHunterExportPng = function (mode) {
         if (lastText === null) {
-            send('error:Nothing to export yet -- the diagram has not rendered.');
+            out(mode, 'error', 'Nothing to export yet -- the diagram has not rendered.');
             return;
         }
         var seq = ++exportSeq;
@@ -229,18 +262,18 @@
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 try {
-                    send('png:' + canvas.toDataURL('image/png').split(',')[1]);
+                    out(mode, 'png', canvas.toDataURL('image/png').split(',')[1]);
                 } catch (e) {
-                    send('error:PNG export isn\'t possible for this diagram type (' + e.name + ') -- export SVG instead.');
+                    out(mode, 'error', 'PNG export isn\'t possible for this diagram type (' + e.name + ') -- export SVG instead.');
                 }
             };
             img.onerror = function () {
-                send('error:PNG export failed while rasterizing the diagram -- export SVG instead.');
+                out(mode, 'error', 'PNG export failed while rasterizing the diagram -- export SVG instead.');
             };
             img.src = 'data:image/svg+xml;base64,' + btoa(bytes);
         }).catch(function (err) {
             initializeMermaid();
-            send('error:PNG export failed: ' + ((err && err.message) || err));
+            out(mode, 'error', 'PNG export failed: ' + ((err && err.message) || err));
         });
     };
 

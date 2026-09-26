@@ -93,6 +93,29 @@ IntelliJ IDEA from 2026.2), you're asked once which editor should own
 `.mmd`/`.mermaid` files. Switch any time from Tools | "Edit Mermaid Files
 with JetBrains Mermaid Editor" / "... with Mermaid Companion".
 
+## Mermaid Companion Pro
+
+An optional paid tier on top of everything above. Nothing that was free
+before is behind it.
+
+- **Export on Save.** In the Preview toolbar, open "Export on Save (Pro)"
+  and turn on SVG and/or PNG for the diagram. From then on, each time you
+  save the file the diagram is rendered again and its export is rewritten
+  next to it (`order-flow.mmd` -> `order-flow.svg` / `order-flow.png`, the
+  same names the manual export suggests).
+  - A diagram that doesn't render (a syntax error while you type) leaves
+    the existing exports exactly as they are, and the toolbar says so.
+  - The exported SVG carries no per-render id, so saving a diagram that
+    didn't change normally leaves the file, and version control, alone.
+  - "Sync Now" updates the exports on demand; the toolbar shows when they
+    were last synced.
+  - Turning it on asks first if the export file already exists, since it
+    will be overwritten on every save.
+  - It is remembered per project, for you -- not shared with your team
+    through version control -- and it runs once the file's Preview tab has
+    been opened in the IDE session, because the preview is what renders
+    the diagram.
+
 ## Enterprise / Team Licensing
 
 Need enterprise features, custom rules, or team licensing? Contact us at

@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Mermaid Companion Pro** (optional paid tier; everything that was free
+  stays free): **Export on Save** keeps a diagram's SVG and/or PNG export
+  up to date every time you save the file, written next to it under the
+  same name the manual export suggests. A diagram that doesn't render
+  leaves the existing exports untouched, and an unchanged diagram leaves
+  the files alone. "Sync Now" in the Preview toolbar updates them on
+  demand.
+
 ## [0.2.0]
 
 ### Added

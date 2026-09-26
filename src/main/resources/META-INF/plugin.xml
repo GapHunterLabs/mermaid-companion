@@ -30,6 +30,11 @@
         IntelliJ IDEA from 2026.2): when both are installed, you're asked
         once which editor should own .mmd/.mermaid files, and the Preview
         tab stays available with either one.</p>
+        <p><b>Mermaid Companion Pro</b> is an optional paid tier; everything
+        described above stays free. <b>Export on Save</b> keeps a diagram's
+        SVG and/or PNG export up to date every time you save the file,
+        written next to it. A diagram that doesn't render leaves the existing
+        exports untouched, and an unchanged diagram leaves the files alone.</p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
