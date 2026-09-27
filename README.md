@@ -1,7 +1,19 @@
 # Mermaid Companion
 
 Syntax highlighting and real syntax validation for `.mmd`/`.mermaid`
-diagram source files (flowchart, sequence, and class diagrams).
+diagram source files (flowchart, sequence, and class diagrams), a live
+preview rendered by mermaid.js, and -- in Mermaid Companion Pro -- Export
+on Save, which keeps the diagram's SVG/PNG export up to date every time you
+save.
+
+![Mermaid Companion: live preview for Mermaid diagrams, and SVG/PNG exports that update on every save](docs/media/hero.gif)
+
+Each feature on its own:
+[real syntax validation](docs/media/01-validation.gif) ·
+[clearer preview errors](docs/media/02-error-bar.gif) ·
+[live preview, zoom & pan](docs/media/03-preview-zoom.gif) ·
+[diagram themes](docs/media/04-themes.gif) ·
+[Export on Save (Pro)](docs/media/05-export-on-save.gif)
 
 ## Why it exists
 

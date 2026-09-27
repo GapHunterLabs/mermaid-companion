@@ -1,4 +1,5 @@
 flowchart TD
+    %% Order fulfilment: edit, save, and the exports follow
     A[Order received] --> B{Payment valid?}
     B -->|No| C[Notify customer]
     B -->|Yes| D[Reserve inventory]
