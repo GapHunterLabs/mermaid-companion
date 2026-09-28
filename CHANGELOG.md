@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [2026.1.1]
+
+### Changed
+
+- Build hardening for the Pro license check: code used only to test the
+  Pro features during development is no longer part of the published
+  plugin. Nothing changes in how the plugin works.
+
 ## [2026.1.0]
 
 ### Added
@@ -119,7 +127,8 @@
   unmatched/mismatched node-shape brackets, and `subgraph` blocks missing
   their `end`.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.0...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.1...HEAD
+[2026.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.0...2026.1.1
 [2026.1.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.2.0...2026.1.0
 [0.2.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.3...0.2.0
 [0.1.3]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.2...0.1.3
