@@ -142,7 +142,8 @@
   unmatched/mismatched node-shape brackets, and `subgraph` blocks missing
   their `end`.
 
-[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.1...HEAD
+[Unreleased]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.2.0...HEAD
+[2026.2.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.1...2026.2.0
 [2026.1.1]: https://github.com/GapHunterLabs/mermaid-companion/compare/2026.1.0...2026.1.1
 [2026.1.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.2.0...2026.1.0
 [0.2.0]: https://github.com/GapHunterLabs/mermaid-companion/compare/0.1.3...0.2.0
