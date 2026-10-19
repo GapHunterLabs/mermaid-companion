@@ -2,9 +2,9 @@
 
 Syntax highlighting and real syntax validation for `.mmd`/`.mermaid`
 diagram source files (flowchart, sequence, and class diagrams), a live
-preview rendered by mermaid.js, and -- in Mermaid Companion Pro -- Export
-on Save, which keeps the diagram's SVG/PNG export up to date every time you
-save.
+preview rendered by mermaid.js with SVG export, and -- in Mermaid Companion
+Pro -- PNG export, diagram themes and Export on Save, which keeps the
+diagram's SVG/PNG export up to date every time you save.
 
 ![Mermaid Companion: live preview for Mermaid diagrams, and SVG/PNG exports that update on every save](docs/media/hero.gif)
 
@@ -12,7 +12,7 @@ Each feature on its own:
 [real syntax validation](docs/media/01-validation.gif) ·
 [clearer preview errors](docs/media/02-error-bar.gif) ·
 [live preview, zoom & pan](docs/media/03-preview-zoom.gif) ·
-[diagram themes](docs/media/04-themes.gif) ·
+[diagram themes (Pro)](docs/media/04-themes.gif) ·
 [Export on Save (Pro)](docs/media/05-export-on-save.gif)
 
 ## Why it exists
@@ -95,10 +95,7 @@ flagged as real errors. Click the "Preview" tab for a live rendered view:
 - **Zoom:** Ctrl+mouse wheel or trackpad pinch (around the cursor), or the
   toolbar's zoom buttons. **Pan:** drag, or scroll. **Fit:** double-click
   or "Fit Diagram". **100%:** "Actual Size".
-- **Theme:** the palette button -- Default, Neutral (printable), Forest,
-  Dark -- independent of the IDE theme.
-- **Export:** SVG or PNG (2x). Some diagram types can't be rasterized in
-  the browser; PNG export then says so, and SVG always works.
+- **Export:** SVG, from the toolbar's export button.
 
 If JetBrains's Mermaid plugin is also installed (it's bundled with
 IntelliJ IDEA from 2026.2), you're asked once which editor should own
@@ -107,9 +104,14 @@ with JetBrains Mermaid Editor" / "... with Mermaid Companion".
 
 ## Mermaid Companion Pro
 
-An optional paid tier on top of everything above. Nothing that was free
-before is behind it.
+An optional paid tier on top of everything above.
 
+- **PNG export** at 2x resolution, from "Export as PNG (Pro)" in the
+  Preview toolbar. Some diagram types can't be rasterized in the browser;
+  PNG export then says so, and SVG always works.
+- **Diagram themes:** the palette button -- Default, Neutral (printable),
+  Forest, Dark -- independent of the IDE theme. Without Pro the preview
+  uses the Default theme.
 - **Export on Save.** In the Preview toolbar, open "Export on Save (Pro)"
   and turn on SVG and/or PNG for the diagram. From then on, each time you
   save the file the diagram is rendered again and its export is rewritten
@@ -127,6 +129,11 @@ before is behind it.
     through version control -- and it runs once the file's Preview tab has
     been opened in the IDE session, because the preview is what renders
     the diagram.
+
+PNG export and diagram themes were free before version 2026.2.0. Any
+installation that runs version 2026.2.0 or later before November 2, 2026
+keeps both without a license; the plugin records the first day it ran in
+the IDE's local settings to know that.
 
 ## Buying for a team
 

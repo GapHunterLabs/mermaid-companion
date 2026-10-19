@@ -14,4 +14,11 @@ object ProGate {
     var licenseCheck: () -> Boolean? = { if (DevSandbox.isForced()) true else CheckLicense.isLicensed() }
 
     fun isOpen(): Boolean = licenseCheck() == true
+
+    /** Whether this installation had PNG export and diagram themes before they moved to Pro. */
+    @Volatile
+    var legacyCheck: () -> Boolean = { LegacyFreeFeatures.keepsMovedFeatures() }
+
+    /** PNG export and diagram themes: a license, or an installation that already had them. */
+    fun allowsMovedFeatures(): Boolean = isOpen() || legacyCheck()
 }

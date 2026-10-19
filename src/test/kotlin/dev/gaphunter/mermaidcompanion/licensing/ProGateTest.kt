@@ -11,15 +11,52 @@ import java.io.File
 class ProGateTest {
 
     private lateinit var original: () -> Boolean?
+    private lateinit var originalLegacy: () -> Boolean
 
     @Before
     fun remember() {
         original = ProGate.licenseCheck
+        originalLegacy = ProGate.legacyCheck
     }
 
     @After
     fun restore() {
         ProGate.licenseCheck = original
+        ProGate.legacyCheck = originalLegacy
+    }
+
+    @Test
+    fun `PNG export and themes need a license on a new installation`() {
+        ProGate.licenseCheck = { false }
+        ProGate.legacyCheck = { false }
+        assertFalse(ProGate.allowsMovedFeatures())
+        ProGate.licenseCheck = { null }
+        assertFalse(ProGate.allowsMovedFeatures())
+    }
+
+    @Test
+    fun `PNG export and themes stay available with a license or on an installation that had them`() {
+        ProGate.licenseCheck = { true }
+        ProGate.legacyCheck = { false }
+        assertTrue(ProGate.allowsMovedFeatures())
+        ProGate.licenseCheck = { false }
+        ProGate.legacyCheck = { true }
+        assertTrue(ProGate.allowsMovedFeatures())
+    }
+
+    @Test
+    fun `the legacy stamp only counts before the cutoff`() {
+        assertTrue(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF.minusDays(1).toString()))
+        assertFalse(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF.toString()))
+        assertFalse(LegacyFreeFeatures.keeps(null))
+        assertFalse(LegacyFreeFeatures.keeps("not a date"))
+    }
+
+    @Test
+    fun `Export on Save stays Pro only -- an installation that had the moved features doesn't get it`() {
+        ProGate.licenseCheck = { false }
+        ProGate.legacyCheck = { true }
+        assertFalse(ProGate.isOpen())
     }
 
     @Test

@@ -4,8 +4,15 @@
 
 ## [Unreleased]
 
+## [2026.2.0]
+
 ### Changed
 
+- **PNG export and diagram themes are now part of Mermaid Companion Pro.** Any
+  installation that runs this version or a later one before November 2, 2026
+  keeps both without a license. Syntax validation, the preview with zoom and
+  pan, and SVG export stay free.
+- The plugin description lists the free and the Pro features separately.
 - The rating prompt's local counter keeps one-way fingerprints of findings
   instead of their file paths, and deletes the list that earlier versions
   kept.

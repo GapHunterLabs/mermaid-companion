@@ -197,7 +197,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 if (!frame.isMain) return
                 pageLoaded = true
                 js("window.gapHunterBridge = function(p) { ${bridge.inject("p")} };")
-                js("window.gapHunterSetTheme('${PreviewTheme.current.id}');")
+                js("window.gapHunterSetTheme('${effectiveTheme().id}');")
                 renderCurrentDocument()
             }
         }, newBrowser.cefBrowser)
@@ -237,7 +237,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         when (message) {
             is BridgeMessage.Zoom -> zoomLabel.text = "${message.percent}%"
             is BridgeMessage.Svg -> save("svg", message.markup.toByteArray(Charsets.UTF_8))
-            is BridgeMessage.Png -> save("png", message.bytes)
+            is BridgeMessage.Png -> if (ProGate.allowsMovedFeatures()) save("png", message.bytes)
             is BridgeMessage.Failure -> notify(message.message, NotificationType.WARNING)
             is BridgeMessage.Rendered -> coordinator.onRendered(message.token)
             is BridgeMessage.RenderFailed -> coordinator.onRenderFailed(message.token, message.message)
@@ -340,12 +340,12 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             add(jsAction("Fit Diagram", AllIcons.General.FitContent, "window.gapHunterFit();"))
             add(jsAction("Actual Size (100%)", AllIcons.General.ActualZoom, "window.gapHunterActualSize();"))
             addSeparator()
-            add(DefaultActionGroup("Diagram Theme", true).apply {
+            add(DefaultActionGroup("Diagram Theme (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.Colors
                 PreviewTheme.entries.forEach { add(ThemeAction(it)) }
             })
             add(jsAction("Export as SVG", AllIcons.ToolbarDecorator.Export, "window.gapHunterExportSvg();"))
-            add(jsAction("Export as PNG", AllIcons.FileTypes.Image, "window.gapHunterExportPng();"))
+            add(PngExportAction())
             addSeparator()
             add(DefaultActionGroup("Export on Save (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.MenuSaveall
@@ -430,12 +430,34 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
     }
 
+    /** The saved theme with Pro (or a legacy installation); the default theme otherwise. */
+    private fun effectiveTheme(): PreviewTheme =
+        if (ProGate.allowsMovedFeatures()) PreviewTheme.current else PreviewTheme.DEFAULT
+
     private inner class ThemeAction(private val theme: PreviewTheme) : ToggleAction(theme.displayName) {
-        override fun isSelected(e: AnActionEvent): Boolean = PreviewTheme.current == theme
+        override fun isSelected(e: AnActionEvent): Boolean = effectiveTheme() == theme
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             if (!state) return
+            if (!ProGate.allowsMovedFeatures()) {
+                CheckLicense.requestLicense("Diagram themes are part of Mermaid Companion Pro.")
+                return
+            }
             PreviewTheme.current = theme
             js("window.gapHunterSetTheme('${theme.id}');")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class PngExportAction : DumbAwareAction("Export as PNG (Pro)", null, AllIcons.FileTypes.Image) {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (!ProGate.allowsMovedFeatures()) {
+                CheckLicense.requestLicense("PNG export is part of Mermaid Companion Pro. SVG export stays free.")
+                return
+            }
+            js("window.gapHunterExportPng();")
+        }
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
         }
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
     }
