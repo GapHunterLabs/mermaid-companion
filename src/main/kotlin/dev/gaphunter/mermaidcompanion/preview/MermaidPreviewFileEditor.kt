@@ -196,8 +196,9 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             override fun onLoadEnd(cefBrowser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
                 if (!frame.isMain) return
                 pageLoaded = true
+                thisLogger().info("Mermaid Companion preview: page loaded")
                 js("window.gapHunterBridge = function(p) { ${bridge.inject("p")} };")
-                js("window.gapHunterSetTheme('${effectiveTheme().id}');")
+                js("window.gapHunterSetTheme('${themeIdForPageLoad()}');")
                 renderCurrentDocument()
             }
         }, newBrowser.cefBrowser)
@@ -433,6 +434,22 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
     /** The saved theme with Pro (or a legacy installation); the default theme otherwise. */
     private fun effectiveTheme(): PreviewTheme =
         if (ProGate.allowsMovedFeatures()) PreviewTheme.current else PreviewTheme.DEFAULT
+
+    /**
+     * The theme for the page's first render. Runs on JCEF's thread inside onLoadEnd, where an
+     * exception would end the handler before the first render (the preview would stay blank
+     * until the next edit). A failed license or settings read falls back to the default theme
+     * instead, and is logged.
+     */
+    private fun themeIdForPageLoad(): String = try {
+        effectiveTheme().id
+    } catch (e: Exception) {
+        thisLogger().warn("Mermaid Companion preview: couldn't read the diagram theme, using the default", e)
+        PreviewTheme.DEFAULT.id
+    } catch (e: LinkageError) {
+        thisLogger().warn("Mermaid Companion preview: couldn't read the diagram theme, using the default", e)
+        PreviewTheme.DEFAULT.id
+    }
 
     private inner class ThemeAction(private val theme: PreviewTheme) : ToggleAction(theme.displayName) {
         override fun isSelected(e: AnActionEvent): Boolean = effectiveTheme() == theme
