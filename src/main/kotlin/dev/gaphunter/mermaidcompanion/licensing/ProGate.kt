@@ -15,10 +15,17 @@ object ProGate {
 
     fun isOpen(): Boolean = licenseCheck() == true
 
-    /** Whether this installation had PNG export and diagram themes before they moved to Pro. */
+    /** Whether this installation had diagram themes before they moved to Pro. */
     @Volatile
-    var legacyCheck: () -> Boolean = { LegacyFreeFeatures.keepsMovedFeatures() }
+    var legacyThemesCheck: () -> Boolean = { LegacyFreeFeatures.keepsThemes() }
 
-    /** PNG export and diagram themes: a license, or an installation that already had them. */
-    fun allowsMovedFeatures(): Boolean = isOpen() || legacyCheck()
+    /** Whether this installation had SVG export before it moved to Pro. */
+    @Volatile
+    var legacySvgCheck: () -> Boolean = { LegacyFreeFeatures.keepsSvgExport() }
+
+    /** Diagram themes: a license, or an installation that already had them. */
+    fun allowsThemes(): Boolean = isOpen() || legacyThemesCheck()
+
+    /** SVG export: a license, or an installation that already had it. PNG export needs neither -- it's free. */
+    fun allowsSvgExport(): Boolean = isOpen() || legacySvgCheck()
 }

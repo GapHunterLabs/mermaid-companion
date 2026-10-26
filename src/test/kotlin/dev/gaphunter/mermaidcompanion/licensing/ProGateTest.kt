@@ -11,51 +11,76 @@ import java.io.File
 class ProGateTest {
 
     private lateinit var original: () -> Boolean?
-    private lateinit var originalLegacy: () -> Boolean
+    private lateinit var originalLegacyThemes: () -> Boolean
+    private lateinit var originalLegacySvg: () -> Boolean
 
     @Before
     fun remember() {
         original = ProGate.licenseCheck
-        originalLegacy = ProGate.legacyCheck
+        originalLegacyThemes = ProGate.legacyThemesCheck
+        originalLegacySvg = ProGate.legacySvgCheck
     }
 
     @After
     fun restore() {
         ProGate.licenseCheck = original
-        ProGate.legacyCheck = originalLegacy
+        ProGate.legacyThemesCheck = originalLegacyThemes
+        ProGate.legacySvgCheck = originalLegacySvg
     }
 
     @Test
-    fun `PNG export and themes need a license on a new installation`() {
+    fun `diagram themes need a license on a new installation`() {
         ProGate.licenseCheck = { false }
-        ProGate.legacyCheck = { false }
-        assertFalse(ProGate.allowsMovedFeatures())
+        ProGate.legacyThemesCheck = { false }
+        assertFalse(ProGate.allowsThemes())
         ProGate.licenseCheck = { null }
-        assertFalse(ProGate.allowsMovedFeatures())
+        assertFalse(ProGate.allowsThemes())
     }
 
     @Test
-    fun `PNG export and themes stay available with a license or on an installation that had them`() {
+    fun `diagram themes stay available with a license or on an installation that had them`() {
         ProGate.licenseCheck = { true }
-        ProGate.legacyCheck = { false }
-        assertTrue(ProGate.allowsMovedFeatures())
+        ProGate.legacyThemesCheck = { false }
+        assertTrue(ProGate.allowsThemes())
         ProGate.licenseCheck = { false }
-        ProGate.legacyCheck = { true }
-        assertTrue(ProGate.allowsMovedFeatures())
+        ProGate.legacyThemesCheck = { true }
+        assertTrue(ProGate.allowsThemes())
     }
 
     @Test
-    fun `the legacy stamp only counts before the cutoff`() {
-        assertTrue(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF.minusDays(1).toString()))
-        assertFalse(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF.toString()))
-        assertFalse(LegacyFreeFeatures.keeps(null))
-        assertFalse(LegacyFreeFeatures.keeps("not a date"))
+    fun `SVG export needs a license on a new installation`() {
+        ProGate.licenseCheck = { false }
+        ProGate.legacySvgCheck = { false }
+        assertFalse(ProGate.allowsSvgExport())
+        ProGate.licenseCheck = { null }
+        assertFalse(ProGate.allowsSvgExport())
+    }
+
+    @Test
+    fun `SVG export stays available with a license or on an installation that had it`() {
+        ProGate.licenseCheck = { true }
+        ProGate.legacySvgCheck = { false }
+        assertTrue(ProGate.allowsSvgExport())
+        ProGate.licenseCheck = { false }
+        ProGate.legacySvgCheck = { true }
+        assertTrue(ProGate.allowsSvgExport())
+    }
+
+    @Test
+    fun `each legacy stamp only counts before its own cutoff`() {
+        assertTrue(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF_THEMES.minusDays(1).toString(), LegacyFreeFeatures.CUTOFF_THEMES))
+        assertFalse(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF_THEMES.toString(), LegacyFreeFeatures.CUTOFF_THEMES))
+        assertTrue(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF_SVG.minusDays(1).toString(), LegacyFreeFeatures.CUTOFF_SVG))
+        assertFalse(LegacyFreeFeatures.keeps(LegacyFreeFeatures.CUTOFF_SVG.toString(), LegacyFreeFeatures.CUTOFF_SVG))
+        assertFalse(LegacyFreeFeatures.keeps(null, LegacyFreeFeatures.CUTOFF_SVG))
+        assertFalse(LegacyFreeFeatures.keeps("not a date", LegacyFreeFeatures.CUTOFF_SVG))
     }
 
     @Test
     fun `Export on Save stays Pro only -- an installation that had the moved features doesn't get it`() {
         ProGate.licenseCheck = { false }
-        ProGate.legacyCheck = { true }
+        ProGate.legacyThemesCheck = { true }
+        ProGate.legacySvgCheck = { true }
         assertFalse(ProGate.isOpen())
     }
 

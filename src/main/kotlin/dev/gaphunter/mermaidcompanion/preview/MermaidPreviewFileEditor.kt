@@ -237,8 +237,8 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
     private fun handle(message: BridgeMessage) {
         when (message) {
             is BridgeMessage.Zoom -> zoomLabel.text = "${message.percent}%"
-            is BridgeMessage.Svg -> save("svg", message.markup.toByteArray(Charsets.UTF_8))
-            is BridgeMessage.Png -> if (ProGate.allowsMovedFeatures()) save("png", message.bytes)
+            is BridgeMessage.Svg -> if (ProGate.allowsSvgExport()) save("svg", message.markup.toByteArray(Charsets.UTF_8))
+            is BridgeMessage.Png -> save("png", message.bytes)
             is BridgeMessage.Failure -> notify(message.message, NotificationType.WARNING)
             is BridgeMessage.Rendered -> coordinator.onRendered(message.token)
             is BridgeMessage.RenderFailed -> coordinator.onRenderFailed(message.token, message.message)
@@ -345,8 +345,8 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 templatePresentation.icon = AllIcons.Actions.Colors
                 PreviewTheme.entries.forEach { add(ThemeAction(it)) }
             })
-            add(jsAction("Export as SVG", AllIcons.ToolbarDecorator.Export, "window.gapHunterExportSvg();"))
-            add(PngExportAction())
+            add(SvgExportAction())
+            add(jsAction("Export as PNG", AllIcons.FileTypes.Image, "window.gapHunterExportPng();"))
             addSeparator()
             add(DefaultActionGroup("Export on Save (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.MenuSaveall
@@ -433,7 +433,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
 
     /** The saved theme with Pro (or a legacy installation); the default theme otherwise. */
     private fun effectiveTheme(): PreviewTheme =
-        if (ProGate.allowsMovedFeatures()) PreviewTheme.current else PreviewTheme.DEFAULT
+        if (ProGate.allowsThemes()) PreviewTheme.current else PreviewTheme.DEFAULT
 
     /**
      * The theme for the page's first render. Runs on JCEF's thread inside onLoadEnd, where an
@@ -455,7 +455,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         override fun isSelected(e: AnActionEvent): Boolean = effectiveTheme() == theme
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             if (!state) return
-            if (!ProGate.allowsMovedFeatures()) {
+            if (!ProGate.allowsThemes()) {
                 CheckLicense.requestLicense("Diagram themes are part of Mermaid Companion Pro.")
                 return
             }
@@ -465,13 +465,13 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
     }
 
-    private inner class PngExportAction : DumbAwareAction("Export as PNG (Pro)", null, AllIcons.FileTypes.Image) {
+    private inner class SvgExportAction : DumbAwareAction("Export as SVG (Pro)", null, AllIcons.ToolbarDecorator.Export) {
         override fun actionPerformed(e: AnActionEvent) {
-            if (!ProGate.allowsMovedFeatures()) {
-                CheckLicense.requestLicense("PNG export is part of Mermaid Companion Pro. SVG export stays free.")
+            if (!ProGate.allowsSvgExport()) {
+                CheckLicense.requestLicense("SVG export is part of Mermaid Companion Pro. PNG export stays free.")
                 return
             }
-            js("window.gapHunterExportPng();")
+            js("window.gapHunterExportSvg();")
         }
         override fun update(e: AnActionEvent) {
             e.presentation.isEnabled = pageLoaded

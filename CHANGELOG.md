@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [2026.3.0]
+
+### Changed
+
+- **SVG export is now part of Mermaid Companion Pro; PNG export is free
+  again.** Any installation that runs this version or a later one before
+  November 9, 2026 keeps SVG export without a license. Diagram themes
+  keep their own existing date (November 2, 2026, set in 2026.2.0) and
+  stay unaffected by this change. Syntax validation, the preview with
+  zoom and pan, and PNG export stay free.
+- The plugin description and `PRIVACY.md` reflect both dates.
+
 ## [2026.2.0]
 
 ### Changed

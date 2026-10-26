@@ -1,6 +1,6 @@
 # Privacy Policy — Mermaid Companion
 
-**Effective date:** 2026-10-19
+**Effective date:** 2026-10-26
 
 Mermaid Companion is a Gap Hunter Labs plugin for IntelliJ Platform IDEs.
 This policy is short because the plugin's design makes it short: there
@@ -23,8 +23,9 @@ instead; 2026.2.0 deletes that older list the first time it counts a finding.
 None of this is ever sent anywhere.
 
 The plugin also keeps the date it first ran in your IDE (version 2026.2.0 or
-later). It uses that date only to know whether this installation keeps PNG
-export and diagram themes without a license, and never sends it anywhere.
+later). It uses that date only to know whether this installation keeps
+diagram themes and SVG export without a license, and never sends it
+anywhere.
 
 Settings you change for the plugin are saved in the IDE's settings, like any
 other IDE setting, and are never sent anywhere.

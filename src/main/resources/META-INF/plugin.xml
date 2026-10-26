@@ -10,23 +10,23 @@
          release-date no earlier release used.
          Do not use a literal double hyphen anywhere in this comment, the XML
          spec forbids it inside comments and patchPluginXml will crash. -->
-    <product-descriptor code="PMERMAIDCOMPANI" release-date="20261019" release-version="20262" optional="true"/>
+    <product-descriptor code="PMERMAIDCOMPANI" release-date="20261026" release-version="20263" optional="true"/>
     <description><![CDATA[
-        <p>Validation and live preview for Mermaid diagram files (.mmd, .mermaid): real syntax errors in the editor, and a preview tab with zoom and SVG export. Rendering uses a bundled copy of mermaid.js, with no network calls.</p>
+        <p>Validation and live preview for Mermaid diagram files (.mmd, .mermaid): real syntax errors in the editor, and a preview tab with zoom and PNG export. Rendering uses a bundled copy of mermaid.js, with no network calls.</p>
         <p><b>Free</b></p>
         <ul>
           <li><b>Syntax highlighting and validation</b> for flowchart, sequence and class diagrams: unterminated strings, unmatched or mismatched node-shape brackets, and <code>subgraph</code> blocks without <code>end</code>. Non-ASCII identifiers and labels are handled like any other.</li>
           <li><b>Preview tab</b> next to the editor: zoom with Ctrl+mouse wheel or pinch, pan by dragging, fit and 100% buttons.</li>
-          <li><b>SVG export</b> of the rendered diagram.</li>
+          <li><b>PNG export</b> of the rendered diagram, at 2x resolution.</li>
           <li><b>Works alongside the JetBrains Mermaid plugin:</b> choose once which editor opens Mermaid files, and switch any time from the Tools menu.</li>
         </ul>
         <p><b>Mermaid Companion Pro</b> (paid, with a free trial)</p>
         <ul>
-          <li><b>PNG export</b> at 2x resolution.</li>
+          <li><b>SVG export</b> of the rendered diagram.</li>
           <li><b>Diagram themes</b> (Default, Neutral, Forest, Dark), independent of the IDE theme: a light, printable diagram in a dark IDE.</li>
           <li><b>Export on Save:</b> every save re-renders the diagram and rewrites its SVG and/or PNG next to the file. A diagram that fails to render leaves the previous export untouched, and an unchanged diagram leaves the file, and your Git history, alone. Sync Now and the last sync time are in the preview toolbar.</li>
         </ul>
-        <p>PNG export and diagram themes were free before version 2026.2.0. Any installation that runs version 2026.2.0 or later before November 2, 2026 keeps both without a license.</p>
+        <p>Diagram themes were free before version 2026.2.0; any installation that ran 2026.2.0 or later before November 2, 2026 keeps them without a license. SVG export was free before version 2026.3.0; any installation that runs 2026.3.0 or later before November 9, 2026 keeps it without a license. PNG export is free either way.</p>
         <p><a href="https://github.com/GapHunterLabs/mermaid-companion">Documentation</a> · <a href="https://github.com/GapHunterLabs/mermaid-companion/issues">Report an issue</a></p>
     ]]></description>
 

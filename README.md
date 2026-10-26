@@ -2,8 +2,8 @@
 
 Syntax highlighting and real syntax validation for `.mmd`/`.mermaid`
 diagram source files (flowchart, sequence, and class diagrams), a live
-preview rendered by mermaid.js with SVG export, and -- in Mermaid Companion
-Pro -- PNG export, diagram themes and Export on Save, which keeps the
+preview rendered by mermaid.js with PNG export, and -- in Mermaid Companion
+Pro -- SVG export, diagram themes and Export on Save, which keeps the
 diagram's SVG/PNG export up to date every time you save.
 
 ![Mermaid Companion: live preview for Mermaid diagrams, and SVG/PNG exports that update on every save](docs/media/hero.gif)
@@ -95,7 +95,9 @@ flagged as real errors. Click the "Preview" tab for a live rendered view:
 - **Zoom:** Ctrl+mouse wheel or trackpad pinch (around the cursor), or the
   toolbar's zoom buttons. **Pan:** drag, or scroll. **Fit:** double-click
   or "Fit Diagram". **100%:** "Actual Size".
-- **Export:** SVG, from the toolbar's export button.
+- **Export:** PNG, from the toolbar's export button. Some diagram types
+  can't be rasterized in the browser; PNG export then says so, and SVG
+  (Pro) always works.
 
 If JetBrains's Mermaid plugin is also installed (it's bundled with
 IntelliJ IDEA from 2026.2), you're asked once which editor should own
@@ -106,9 +108,8 @@ with JetBrains Mermaid Editor" / "... with Mermaid Companion".
 
 An optional paid tier on top of everything above.
 
-- **PNG export** at 2x resolution, from "Export as PNG (Pro)" in the
-  Preview toolbar. Some diagram types can't be rasterized in the browser;
-  PNG export then says so, and SVG always works.
+- **SVG export** of the rendered diagram, from "Export as SVG (Pro)" in the
+  Preview toolbar.
 - **Diagram themes:** the palette button -- Default, Neutral (printable),
   Forest, Dark -- independent of the IDE theme. Without Pro the preview
   uses the Default theme.
@@ -130,10 +131,12 @@ An optional paid tier on top of everything above.
     been opened in the IDE session, because the preview is what renders
     the diagram.
 
-PNG export and diagram themes were free before version 2026.2.0. Any
-installation that runs version 2026.2.0 or later before November 2, 2026
-keeps both without a license; the plugin records the first day it ran in
-the IDE's local settings to know that.
+Diagram themes were free before version 2026.2.0; any installation that ran
+2026.2.0 or later before November 2, 2026 keeps them without a license. SVG
+export was free before version 2026.3.0; any installation that runs 2026.3.0
+or later before November 9, 2026 keeps it without a license. PNG export is
+free either way. The plugin records the first day it ran in the IDE's local
+settings to know that.
 
 ## Buying for a team
 
