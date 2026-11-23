@@ -90,14 +90,25 @@ Open a `.mmd`/`.mermaid` file. Structural keywords (`flowchart`,
 `subgraph`, `end`, `sequenceDiagram`, `classDiagram`, etc.) and node-shape
 delimiters, strings, and comments get their own colors; unterminated
 strings, unmatched/mismatched brackets, and subgraphs missing `end` are
-flagged as real errors. Click the "Preview" tab for a live rendered view:
+flagged as real errors in flowchart, sequence and class diagrams. The checks
+follow each type's own grammar: message and note text in sequence diagrams,
+class bodies and relation labels in class diagrams, `id>text]` shapes,
+multi-line quoted labels, directives and front matter are not mistaken for
+errors. Other diagram types (state, ER, gantt, mindmap and the rest) get the
+preview but no syntax checks, so they never show a false error; the preview
+shows mermaid.js's own message when one doesn't parse. Click the "Preview"
+tab for a live rendered view:
 
 - **Zoom:** Ctrl+mouse wheel or trackpad pinch (around the cursor), or the
   toolbar's zoom buttons. **Pan:** drag, or scroll. **Fit:** double-click
   or "Fit Diagram". **100%:** "Actual Size".
-- **Export:** PNG, from the toolbar's export button. Some diagram types
-  can't be rasterized in the browser; PNG export then says so, and SVG
-  (Pro) always works.
+- **Export:** PNG, from the toolbar's export button. A diagram too large
+  for the browser's canvas can't be rasterized; PNG export then says so,
+  and SVG (Pro) still works.
+- **Size limits:** the bundled mermaid.js renders diagrams of up to 50,000
+  characters, and flowcharts of up to 500 edges. A larger diagram shows an
+  error instead of a preview, and Export on Save leaves its existing exports
+  alone.
 
 If JetBrains's Mermaid plugin is also installed (it's bundled with
 IntelliJ IDEA from 2026.2), you're asked once which editor should own
@@ -120,8 +131,12 @@ An optional paid tier on top of everything above.
   same names the manual export suggests).
   - A diagram that doesn't render (a syntax error while you type) leaves
     the existing exports exactly as they are, and the toolbar says so.
-  - The exported SVG carries no per-render id, so saving a diagram that
-    didn't change normally leaves the file, and version control, alone.
+  - The exported SVG carries no per-render id, so saving a flowchart,
+    state, ER, gantt, pie, mindmap or most other diagrams that didn't
+    change leaves the file, and version control, alone. Sequence and class
+    diagrams, sankey, architecture, and gitGraph commits without an `id:`
+    still get a slightly different SVG on each save: mermaid.js numbers
+    their elements across the session, or draws random ids.
   - "Sync Now" updates the exports on demand; the toolbar shows when they
     were last synced.
   - Turning it on asks first if the export file already exists, since it
@@ -155,15 +170,19 @@ page. JetBrains Marketplace handles checkout and license management.
 
 ```
 ./gradlew test           # unit tests
+./gradlew test -Pstress=true --tests '*StressTest'   # stress tests, off by default
 ./gradlew buildPlugin    # generates build/distributions/*.zip
 ./gradlew verifyPlugin   # checks compatibility against real IDEs
 ```
+
+[docs/TESTING.md](docs/TESTING.md) describes each suite, including the
+corpus that compares the syntax checker with mermaid.js itself.
 
 ## License
 
 The source code is licensed under the Apache License 2.0. See `LICENSE`.
 
-The plugin published on JetBrains Marketplace is distributed under the [Gap Hunter Labs End User License Agreement](https://gaphunterlabs.github.io/eula/) ([Spanish](https://gaphunterlabs.github.io/es/eula/)). The EULA covers the paid license for the Pro features (bought on JetBrains Marketplace), warranty, liability, and support. It does not restrict any right the Apache License gives you over the source code.
+The plugin published on JetBrains Marketplace is distributed under the [Gap Hunter Labs End User License Agreement](https://gaphunterlabs.com/eula/) ([Spanish](https://gaphunterlabs.com/es/eula/)). The EULA covers the paid license for the Pro features (bought on JetBrains Marketplace), warranty, liability, and support. It does not restrict any right the Apache License gives you over the source code.
 
 Bundles [mermaid.js](https://github.com/mermaid-js/mermaid) 11.16.1,
 MIT-licensed -- see `src/main/resources/mermaid/LICENSE-mermaid.txt`.

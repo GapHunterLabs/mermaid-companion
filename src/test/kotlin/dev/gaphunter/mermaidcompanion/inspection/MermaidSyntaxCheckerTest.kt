@@ -6,7 +6,7 @@ import org.junit.Test
 
 /**
  * The fixtures that matter most here reproduce the exact competitor bugs
- * cited in NEXT_BATCH_PLAN.md/README.md: non-ASCII subgraph identifiers
+ * cited in README.md: non-ASCII subgraph identifiers
  * and node labels wrongly flagged as errors. Each "no false positive"
  * test below is the direct regression test for one specific quoted
  * complaint.

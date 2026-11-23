@@ -1,0 +1,93 @@
+# Verdicts of the bundled mermaid.js 11.16.1 (mermaid.parse) for each corpus file.
+# Regenerate with tools/render-corpus.py; columns: file, verdict (ok|error), detail.
+invalid-class-unclosed-body.mmd	error	Parse error on line 3: ... +String name ---------------------^ Expecting 'STRUCT_STOP', 'MEMBER', got 'EOF_IN_STRUCT'
+invalid-empty.mmd	error	No diagram type detected matching given configuration for text: 
+invalid-end-without-subgraph.mmd	error	Parse error on line 3: ... TD A --> B end ---------------------^ Expecting 'SEMI', 'NEWLINE', 'SPACE', 'EOF', 'subgraph', 'acc_title', 'acc_descr', 'acc_descr_m
+invalid-er-bad-cardinality.mmd	error	Parse error on line 2: ...am CUSTOMER ||--xx ORDER : places ----------------------^ Expecting 'ZERO_OR_ONE', 'ZERO_OR_MORE', 'ONE_OR_MORE', 'ONLY_ONE', 'MD_PARE
+invalid-extra-closing-bracket.mmd	error	Parse error on line 2: ...chart TD A[Start]] --> B ----------------------^ Expecting 'SQE', 'TAGEND', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'SUBROUTINEEND'
+invalid-flowchart-asymmetric-unclosed.mmd	error	Parse error on line 4: ...A>Flag shape --> B ---------------------^ Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLI
+invalid-flowchart-bad-arrow.mmd	error	Parse error on line 2: ...wchart TD A --> --> B ----------------------^ Expecting 'AMP', 'COLON', 'PIPE', 'TESTSTR', 'DOWN', 'DEFAULT', 'NUM', 'COMMA', 'NODE_ST
+invalid-flowchart-directive-unclosed.mmd	error	No diagram type detected matching given configuration for text: 
+invalid-flowchart-end-inside-subgraph-label.mmd	error	Parse error on line 5: ... A[the end] ---------------------^ Expecting 'SEMI', 'NEWLINE', 'SPACE', 'EOF', 'subgraph', 'end', 'acc_title', 'acc_descr', 'acc_desc
+invalid-flowchart-multiline-label-unclosed.mmd	error	Parse error on line 5: ...ne one B --> C --------------------^ Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLINDERE
+invalid-flowchart-paren-in-edge-label.mmd	error	Parse error on line 2: ...t LR A -->|yes :)| B ----------------------^ Expecting 'PIPE', 'TAGEND', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'PE'
+invalid-mismatched-bracket.mmd	error	Parse error on line 2: ...chart TD A[Start) --> B ----------------------^ Expecting 'SQE', 'TAGEND', 'UNICODE_TEXT', 'TEXT', 'TAGSTART', got 'PE'
+invalid-pie-unterminated-label.mmd	error	Parsing failed: Lexer error on line 2, column 5: unexpected character: ->"<- at offset: 19, skipped 5 characters. Parse error on line 2, column 11: Expecting to
+invalid-sequence-missing-arrow-target.mmd	error	Parse error on line 2: ...Diagram Alice->>: hello ----------------------^ Expecting '+', '-', '()', 'ACTOR', got 'TXT'
+invalid-sequence-unbalanced-participant.mmd	error	Parse error on line 5: ... Alice->>Alice: hi ---------------------^ Expecting 'CONFIG_END', got '1'
+invalid-state-unclosed-composite.mmd	error	Parse error on line 3: ... [*] --> Slow ---------------------^ Expecting 'SPACE', 'NL', 'HIDE_EMPTY', 'scale', 'COMPOSIT_STATE', 'STRUCT_STOP', 'STATE_DESCR', '
+invalid-subgraph-without-end.mmd	error	Parse error on line 5: ...ph one A --> B --------------------^ Expecting 'SEMI', 'NEWLINE', 'SPACE', 'EOF', 'subgraph', 'end', 'acc_title', 'acc_descr', 'acc_de
+invalid-unclosed-bracket.mmd	error	Parse error on line 4: ... A[Start --> B --------------------^ Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLINDERE
+invalid-unknown-type.mmd	error	No diagram type detected matching given configuration for text: notADiagram A --> B 
+invalid-unterminated-string.mmd	error	Parse error on line 4: ...never closed --> B ---------------------^ Expecting 'SQE', 'DOUBLECIRCLEEND', 'PE', '-)', 'STADIUMEND', 'SUBROUTINEEND', 'PIPE', 'CYLI
+invalid-whitespace-only.mmd	error	No diagram type detected matching given configuration for text: 
+invalid-zenuml-not-bundled.mmd	error	No diagram type detected matching given configuration for text: zenuml Alice->Bob: hello 
+valid-architecture.mmd	ok	architecture
+valid-block.mmd	ok	block
+valid-c4.mmd	ok	c4
+valid-class-basic.mmd	ok	class
+valid-class-generics-annotations.mmd	ok	class
+valid-class-member-unbalanced.mmd	ok	class
+valid-class-namespace.mmd	ok	class
+valid-class-relation-label-paren.mmd	ok	class
+valid-class-v2-header.mmd	ok	classDiagram
+valid-er-attributes.mmd	ok	er
+valid-er.mmd	ok	er
+valid-flowchart-acc-single-line.mmd	ok	flowchart-v2
+valid-flowchart-accdescr-block.mmd	ok	flowchart-v2
+valid-flowchart-asymmetric-only.mmd	ok	flowchart-v2
+valid-flowchart-basic.mmd	ok	flowchart-v2
+valid-flowchart-bom.mmd	ok	flowchart-v2
+valid-flowchart-classdef-click.mmd	ok	flowchart-v2
+valid-flowchart-comment-with-brackets.mmd	ok	flowchart-v2
+valid-flowchart-crlf.mmd	ok	flowchart-v2
+valid-flowchart-directive-multi-line.mmd	ok	flowchart-v2
+valid-flowchart-directive-single-line.mmd	ok	flowchart-v2
+valid-flowchart-edge-label-text.mmd	ok	flowchart-v2
+valid-flowchart-edge-text-word-subgraph.mmd	ok	flowchart-v2
+valid-flowchart-entity-codes.mmd	ok	flowchart-v2
+valid-flowchart-frontmatter-paren.mmd	ok	flowchart-v2
+valid-flowchart-frontmatter.mmd	ok	flowchart-v2
+valid-flowchart-gt-in-labels.mmd	ok	flowchart-v2
+valid-flowchart-header-only.mmd	ok	flowchart-v2
+valid-flowchart-label-word-end.mmd	ok	flowchart-v2
+valid-flowchart-label-word-subgraph.mmd	ok	flowchart-v2
+valid-flowchart-markdown-string.mmd	ok	flowchart-v2
+valid-flowchart-multiline-quoted-label.mmd	ok	flowchart-v2
+valid-flowchart-nested-subgraphs.mmd	ok	flowchart-v2
+valid-flowchart-new-shape-syntax.mmd	ok	flowchart-v2
+valid-flowchart-semicolon-subgraph.mmd	ok	flowchart-v2
+valid-flowchart-shapes.mmd	ok	flowchart-v2
+valid-flowchart-tabs.mmd	ok	flowchart-v2
+valid-flowchart-unicode-ids.mmd	ok	flowchart-v2
+valid-flowchart-unicode.mmd	ok	flowchart-v2
+valid-gantt.mmd	ok	gantt
+valid-gitgraph-fixed-ids.mmd	ok	gitGraph
+valid-gitgraph.mmd	ok	gitGraph
+valid-graph-lr.mmd	ok	flowchart-v2
+valid-journey.mmd	ok	journey
+valid-kanban.mmd	ok	kanban
+valid-mindmap-cloud-bang.mmd	ok	mindmap
+valid-mindmap.mmd	ok	mindmap
+valid-packet.mmd	ok	packet
+valid-pie.mmd	ok	pie
+valid-quadrant.mmd	ok	quadrantChart
+valid-radar.mmd	ok	radar
+valid-requirement.mmd	ok	requirement
+valid-sankey.mmd	ok	sankey
+valid-sequence-accdescr-block.mmd	ok	sequence
+valid-sequence-alias-paren.mmd	ok	sequence
+valid-sequence-async-arrow.mmd	ok	sequence
+valid-sequence-basic.mmd	ok	sequence
+valid-sequence-blocks.mmd	ok	sequence
+valid-sequence-free-text-bracket.mmd	ok	sequence
+valid-sequence-free-text-paren.mmd	ok	sequence
+valid-sequence-free-text-quote.mmd	ok	sequence
+valid-sequence-loop-label-paren.mmd	ok	sequence
+valid-sequence-participant-config.mmd	ok	sequence
+valid-sequence-rect-rgb.mmd	ok	sequence
+valid-state-v1.mmd	ok	stateDiagram
+valid-state-v2.mmd	ok	stateDiagram
+valid-timeline.mmd	ok	timeline
+valid-treemap.mmd	ok	treemap
+valid-xychart.mmd	ok	xychart
