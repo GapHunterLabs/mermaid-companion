@@ -122,6 +122,62 @@
         };
     }
 
+    /*
+     * Diagram themes. The four mermaid.js ships, and presets built on its `base` theme (the only one
+     * mermaid lets a page recolor). Each preset names the background it is drawn on: the preview and
+     * a PNG use it. Text against its background reaches 4.5:1 and lines and borders 3:1 (WCAG AA),
+     * checked by PreviewScriptNegativeTest. An id that is not listed here is the default theme.
+     */
+    var BUILT_IN_THEMES = { 'default': '#ffffff', 'neutral': '#ffffff', 'forest': '#ffffff', 'dark': '#1e1e1e' };
+    var THEME_PRESETS = {
+        'high-contrast': { background: '#ffffff', vars: {
+            primaryColor: '#ffffff', primaryTextColor: '#000000', primaryBorderColor: '#000000', lineColor: '#000000',
+            secondaryColor: '#f2f2f2', tertiaryColor: '#ffffff', textColor: '#000000', titleColor: '#000000',
+            clusterBkg: '#ffffff', clusterBorder: '#000000', edgeLabelBackground: '#ffffff',
+            noteBkgColor: '#ffffff', noteTextColor: '#000000', noteBorderColor: '#000000',
+            actorBkg: '#ffffff', actorBorder: '#000000', actorTextColor: '#000000', signalColor: '#000000', signalTextColor: '#000000' } },
+        'blueprint': { background: '#0b2545', vars: {
+            darkMode: true, background: '#0b2545',
+            primaryColor: '#13315c', primaryTextColor: '#ffffff', primaryBorderColor: '#8da9c4', lineColor: '#eef4ed',
+            secondaryColor: '#134074', tertiaryColor: '#0b2545', textColor: '#eef4ed', titleColor: '#ffffff',
+            clusterBkg: '#13315c', clusterBorder: '#8da9c4', edgeLabelBackground: '#0b2545',
+            noteBkgColor: '#134074', noteTextColor: '#ffffff', noteBorderColor: '#8da9c4',
+            actorBkg: '#13315c', actorBorder: '#8da9c4', actorTextColor: '#ffffff', signalColor: '#eef4ed', signalTextColor: '#eef4ed' } },
+        'monochrome': { background: '#ffffff', vars: {
+            primaryColor: '#e8e8e8', primaryTextColor: '#1a1a1a', primaryBorderColor: '#4d4d4d', lineColor: '#333333',
+            secondaryColor: '#d4d4d4', tertiaryColor: '#f5f5f5', textColor: '#1a1a1a', titleColor: '#1a1a1a',
+            clusterBkg: '#f5f5f5', clusterBorder: '#4d4d4d', edgeLabelBackground: '#ffffff',
+            noteBkgColor: '#f5f5f5', noteTextColor: '#1a1a1a', noteBorderColor: '#4d4d4d',
+            actorBkg: '#e8e8e8', actorBorder: '#4d4d4d', actorTextColor: '#1a1a1a', signalColor: '#333333', signalTextColor: '#1a1a1a' } }
+    };
+
+    function knownTheme(id) {
+        return Object.prototype.hasOwnProperty.call(BUILT_IN_THEMES, id) || Object.prototype.hasOwnProperty.call(THEME_PRESETS, id);
+    }
+
+    /* The part of mermaid's configuration a theme sets: { theme } or { theme: 'base', themeVariables }. */
+    function themeConfig(id) {
+        if (Object.prototype.hasOwnProperty.call(THEME_PRESETS, id)) {
+            var vars = {};
+            for (var k in THEME_PRESETS[id].vars) {
+                vars[k] = THEME_PRESETS[id].vars[k];
+            }
+            return { theme: 'base', themeVariables: vars };
+        }
+        return { theme: Object.prototype.hasOwnProperty.call(BUILT_IN_THEMES, id) ? id : 'default' };
+    }
+
+    function themeBackground(id) {
+        if (Object.prototype.hasOwnProperty.call(THEME_PRESETS, id)) {
+            return THEME_PRESETS[id].background;
+        }
+        return Object.prototype.hasOwnProperty.call(BUILT_IN_THEMES, id) ? BUILT_IN_THEMES[id] : BUILT_IN_THEMES['default'];
+    }
+
+    function themeIds() {
+        return Object.keys(BUILT_IN_THEMES).concat(Object.keys(THEME_PRESETS));
+    }
+
     /* The message prefix of an export: Export on Save ('sync'), the clipboard ('copy'), or a save dialog. */
     function exportPrefix(mode) {
         return mode === 'sync' || mode === 'copy' ? mode : '';
@@ -191,7 +247,8 @@
         MIN_SCALE: MIN_SCALE, MAX_SCALE: MAX_SCALE, FIT_MAX_SCALE: FIT_MAX_SCALE,
         zoomAt: zoomAt, panBy: panBy, fit: fit, actualSize: actualSize, wheelFactor: wheelFactor,
         isTooLargeStandIn: isTooLargeStandIn, canvasFits: canvasFits, pngOptions: pngOptions, exportPrefix: exportPrefix,
-        clickTarget: clickTarget, isClick: isClick
+        clickTarget: clickTarget, isClick: isClick,
+        themeConfig: themeConfig, themeBackground: themeBackground, themeIds: themeIds, THEME_PRESETS: THEME_PRESETS
     };
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
@@ -259,7 +316,7 @@
     }
 
     function background() {
-        return theme === 'dark' ? '#1e1e1e' : '#ffffff';
+        return themeBackground(theme);
     }
 
     function maxTextSize() {
@@ -301,7 +358,11 @@
      * diagram differ and Export on Save rewrite an unchanged file.
      */
     function configFor(extra) {
-        var config = { startOnLoad: false, theme: theme, suppressErrorRendering: true, handDrawnSeed: 1 };
+        var config = { startOnLoad: false, suppressErrorRendering: true, handDrawnSeed: 1 };
+        var t = themeConfig(theme);
+        for (var tk in t) {
+            config[tk] = t[tk];
+        }
         for (var key in (extra || {})) {
             config[key] = extra[key];
         }
@@ -455,7 +516,7 @@
     };
 
     root.gapHunterSetTheme = function (name) {
-        theme = name;
+        theme = knownTheme(name) ? name : 'default';
         if (lastText !== null) {
             root.gapHunterRender(lastText);
         }

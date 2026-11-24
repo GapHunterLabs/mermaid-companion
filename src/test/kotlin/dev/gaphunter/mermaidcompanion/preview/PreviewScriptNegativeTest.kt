@@ -390,6 +390,64 @@ class PreviewScriptNegativeTest {
     )
 
     @Test
+    fun `the page knows exactly the themes the toolbar offers`() = runNode(
+        """
+        same(p.themeIds().slice().sort(), [${PreviewTheme.entries.joinToString { "'" + it.id + "'" }}].sort());
+        """,
+    )
+
+    @Test
+    fun `an unknown theme id is the default theme, and a preset's settings cannot be changed from outside`() = runNode(
+        """
+        for (const bad of ['', 'Dark', 'base', '__proto__', 'constructor', 'toString', undefined, null, 5]) {
+            same(p.themeConfig(bad), { theme: 'default' });
+            assert.strictEqual(p.themeBackground(bad), '#ffffff', String(bad));
+        }
+        same(p.themeConfig('forest'), { theme: 'forest' });
+        assert.strictEqual(p.themeBackground('dark'), '#1e1e1e');
+        const c = p.themeConfig('blueprint');
+        assert.strictEqual(c.theme, 'base');
+        c.themeVariables.primaryColor = '#ff0000';
+        assert.strictEqual(p.themeConfig('blueprint').themeVariables.primaryColor, '#13315c');
+        assert.strictEqual(p.themeBackground('blueprint'), '#0b2545');
+        // The page ignores a theme it does not know, instead of handing it to mermaid.
+        const pg = page(async () => ({ svg: '<svg/>' }));
+        pg.sandbox.gapHunterSetTheme('no-such-theme');
+        pg.sandbox.gapHunterRender('flowchart LR\n A --> B');
+        await flush();
+        assert.strictEqual(pg.configs[pg.configs.length - 1].theme, 'default');
+        pg.sandbox.gapHunterSetTheme('monochrome');
+        pg.sandbox.gapHunterRender('flowchart LR\n A --> B');
+        await flush();
+        const last = pg.configs[pg.configs.length - 1];
+        assert.strictEqual(last.theme, 'base');
+        assert.strictEqual(last.themeVariables.primaryColor, '#e8e8e8');
+        assert.strictEqual(last.handDrawnSeed, 1);
+        """,
+    )
+
+    @Test
+    fun `every preset palette reaches WCAG AA contrast for text, lines and borders`() = runNode(
+        """
+        const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+            .map((v) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+            return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        for (const [id, preset] of Object.entries(p.THEME_PRESETS)) {
+            const v = preset.vars, bg = preset.background;
+            const text = [['primaryTextColor', 'primaryColor'], ['primaryTextColor', 'secondaryColor'], ['textColor', 'clusterBkg'],
+                ['actorTextColor', 'actorBkg'], ['noteTextColor', 'noteBkgColor'], ['titleColor', 'clusterBkg']];
+            for (const [fg, back] of text) assert.ok(ratio(v[fg], v[back]) >= 4.5, id + ' ' + fg + ' on ' + back + ': ' + ratio(v[fg], v[back]));
+            for (const fg of ['textColor', 'signalTextColor']) assert.ok(ratio(v[fg], bg) >= 4.5, id + ' ' + fg + ' on background');
+            for (const fg of ['lineColor', 'primaryBorderColor', 'clusterBorder', 'actorBorder', 'signalColor']) {
+                assert.ok(ratio(v[fg], bg) >= 3, id + ' ' + fg + ' on background: ' + ratio(v[fg], bg));
+            }
+            for (const value of Object.values(v)) if (typeof value === 'string') assert.ok(/^#[0-9a-f]{6}$/.test(value), id + ': ' + value);
+        }
+        """,
+    )
+
+    @Test
     fun `a NaN zoom from the toolbar leaves the stage transform finite`() = runNode(
         """
         const pg = page(async () => ({ svg: '<svg/>' }));

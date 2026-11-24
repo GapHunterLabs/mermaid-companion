@@ -11,7 +11,10 @@ enum class PreviewTheme(val id: String, val displayName: String) {
     DEFAULT("default", "Default"),
     NEUTRAL("neutral", "Neutral (printable)"),
     FOREST("forest", "Forest"),
-    DARK("dark", "Dark");
+    DARK("dark", "Dark"),
+    HIGH_CONTRAST("high-contrast", "High Contrast (printable)"),
+    BLUEPRINT("blueprint", "Blueprint"),
+    MONOCHROME("monochrome", "Monochrome");
 
     companion object {
         private const val KEY = "dev.gaphunter.mermaidcompanion.previewTheme"
