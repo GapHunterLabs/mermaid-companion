@@ -448,6 +448,38 @@ class PreviewScriptNegativeTest {
     )
 
     @Test
+    fun `the page knows exactly the looks the toolbar offers, and anything else is classic`() = runNode(
+        """
+        same(p.LOOKS.slice().sort(), [${DiagramLook.entries.joinToString { "'" + it.id + "'" }}].sort());
+        for (const ok of p.LOOKS) same(p.lookConfig(ok), { look: ok });
+        for (const bad of ['', 'handdrawn', 'HandDrawn', 'default', 'bogus', '__proto__', 'toString', undefined, null, 1, {}]) {
+            same(p.lookConfig(bad), { look: 'classic' });
+        }
+        """,
+    )
+
+    @Test
+    fun `the chosen look reaches every render and every export, with the fixed seed`() = runNode(
+        """
+        const pg = page(async () => ({ svg: '<svg data-size="300x200"/>' }), 'data:image/png;base64,AAAA');
+        pg.sandbox.gapHunterRender('flowchart LR\n A --> B');
+        await flush();
+        assert.strictEqual(pg.configs[pg.configs.length - 1].look, 'classic');
+        pg.sandbox.gapHunterSetLook('handDrawn');
+        await flush();
+        assert.strictEqual(pg.configs[pg.configs.length - 1].look, 'handDrawn');
+        pg.sandbox.gapHunterExportSvg('sync');
+        pg.sandbox.gapHunterExportPng('sync');
+        await flush();
+        const tail = pg.configs.slice(-2);
+        assert.ok(tail.every((c) => c.look === 'handDrawn' && c.handDrawnSeed === 1), JSON.stringify(tail));
+        pg.sandbox.gapHunterSetLook('sketchy');
+        await flush();
+        assert.strictEqual(pg.configs[pg.configs.length - 1].look, 'classic');
+        """,
+    )
+
+    @Test
     fun `a NaN zoom from the toolbar leaves the stage transform finite`() = runNode(
         """
         const pg = page(async () => ({ svg: '<svg/>' }));

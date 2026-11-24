@@ -12,6 +12,12 @@ enum class PreviewTheme(val id: String, val displayName: String) {
     NEUTRAL("neutral", "Neutral (printable)"),
     FOREST("forest", "Forest"),
     DARK("dark", "Dark"),
+    NEO("neo", "Neo"),
+    NEO_DARK("neo-dark", "Neo Dark"),
+    REDUX("redux", "Redux"),
+    REDUX_DARK("redux-dark", "Redux Dark"),
+    REDUX_COLOR("redux-color", "Redux Color"),
+    REDUX_DARK_COLOR("redux-dark-color", "Redux Dark Color"),
     HIGH_CONTRAST("high-contrast", "High Contrast (printable)"),
     BLUEPRINT("blueprint", "Blueprint"),
     MONOCHROME("monochrome", "Monochrome");

@@ -216,6 +216,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 pageLoaded = true
                 thisLogger().info("Mermaid Companion preview: page loaded")
                 js("window.gapHunterBridge = function(p) { ${bridge.inject("p")} };")
+                js("window.gapHunterSetLook('${lookIdForPageLoad()}');")
                 js("window.gapHunterSetTheme('${themeIdForPageLoad()}');")
                 renderCurrentDocument()
             }
@@ -400,6 +401,8 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             add(DefaultActionGroup("Diagram Theme (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.Colors
                 PreviewTheme.entries.forEach { add(ThemeAction(it)) }
+                addSeparator("Look")
+                DiagramLook.entries.forEach { add(LookAction(it)) }
             })
             add(SvgExportAction())
             add(PngExportAction())
@@ -517,6 +520,35 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
     } catch (e: LinkageError) {
         thisLogger().warn("Mermaid Companion preview: couldn't read the diagram theme, using the default", e)
         PreviewTheme.DEFAULT.id
+    }
+
+    /** The saved look with Pro (or a legacy installation that kept themes); classic otherwise. */
+    private fun effectiveLook(): DiagramLook =
+        if (ProGate.allowsThemes()) DiagramLook.current else DiagramLook.CLASSIC
+
+    /** Like themeIdForPageLoad: never lets a settings or license failure end the first render. */
+    private fun lookIdForPageLoad(): String = try {
+        effectiveLook().id
+    } catch (e: Exception) {
+        thisLogger().warn("Mermaid Companion preview: couldn't read the diagram look, using classic", e)
+        DiagramLook.CLASSIC.id
+    } catch (e: LinkageError) {
+        thisLogger().warn("Mermaid Companion preview: couldn't read the diagram look, using classic", e)
+        DiagramLook.CLASSIC.id
+    }
+
+    private inner class LookAction(private val look: DiagramLook) : ToggleAction(look.displayName) {
+        override fun isSelected(e: AnActionEvent): Boolean = effectiveLook() == look
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (!state) return
+            if (!ProGate.allowsThemes()) {
+                CheckLicense.requestLicense("Diagram looks are part of Mermaid Companion Pro, with the diagram themes.")
+                return
+            }
+            DiagramLook.current = look
+            js("window.gapHunterSetLook('${look.id}');")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
     }
 
     private inner class ThemeAction(private val theme: PreviewTheme) : ToggleAction(theme.displayName) {

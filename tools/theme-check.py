@@ -69,7 +69,7 @@ with sync_playwright() as pw:
     page = browser.new_page(viewport={"width": 1200, "height": 900})
     page.set_content(html)
     page.evaluate("window.__m = []; window.gapHunterBridge = (p) => window.__m.push(p);")
-    for theme in ("default", "neutral", "forest", "dark") + PRESETS:
+    for theme in ("default", "neutral", "forest", "dark", "neo", "neo-dark", "redux", "redux-dark", "redux-color", "redux-dark-color") + PRESETS:
         page.evaluate("(t) => window.gapHunterSetTheme(t)", theme)
         worst = None
         for name, text in SAMPLES.items():

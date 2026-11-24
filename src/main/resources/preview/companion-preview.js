@@ -128,7 +128,9 @@
      * a PNG use it. Text against its background reaches 4.5:1 and lines and borders 3:1 (WCAG AA),
      * checked by PreviewScriptNegativeTest. An id that is not listed here is the default theme.
      */
-    var BUILT_IN_THEMES = { 'default': '#ffffff', 'neutral': '#ffffff', 'forest': '#ffffff', 'dark': '#1e1e1e' };
+    var BUILT_IN_THEMES = { 'default': '#ffffff', 'neutral': '#ffffff', 'forest': '#ffffff', 'dark': '#1e1e1e',
+        'neo': '#ffffff', 'neo-dark': '#333333', 'redux': '#ffffff', 'redux-dark': '#333333',
+        'redux-color': '#ffffff', 'redux-dark-color': '#333333' };
     var THEME_PRESETS = {
         'high-contrast': { background: '#ffffff', vars: {
             primaryColor: '#ffffff', primaryTextColor: '#000000', primaryBorderColor: '#000000', lineColor: '#000000',
@@ -172,6 +174,16 @@
             return THEME_PRESETS[id].background;
         }
         return Object.prototype.hasOwnProperty.call(BUILT_IN_THEMES, id) ? BUILT_IN_THEMES[id] : BUILT_IN_THEMES['default'];
+    }
+
+    /*
+     * mermaid.js's looks. Anything else is classic: mermaid itself draws an unknown look in a third way.
+     * handDrawn uses the fixed handDrawnSeed of every render, so its strokes are the same each time.
+     */
+    var LOOKS = ['classic', 'handDrawn', 'neo'];
+
+    function lookConfig(id) {
+        return { look: LOOKS.indexOf(id) >= 0 ? id : 'classic' };
     }
 
     function themeIds() {
@@ -248,7 +260,8 @@
         zoomAt: zoomAt, panBy: panBy, fit: fit, actualSize: actualSize, wheelFactor: wheelFactor,
         isTooLargeStandIn: isTooLargeStandIn, canvasFits: canvasFits, pngOptions: pngOptions, exportPrefix: exportPrefix,
         clickTarget: clickTarget, isClick: isClick,
-        themeConfig: themeConfig, themeBackground: themeBackground, themeIds: themeIds, THEME_PRESETS: THEME_PRESETS
+        themeConfig: themeConfig, themeBackground: themeBackground, themeIds: themeIds, THEME_PRESETS: THEME_PRESETS,
+        lookConfig: lookConfig, LOOKS: LOOKS
     };
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
@@ -264,6 +277,7 @@
     var errorBar = document.getElementById('error');
     var view = { scale: 1, x: 0, y: 0 };
     var theme = 'default';
+    var look = 'classic';
     var lastText = null;
     var lastGoodText = null; // the text of the last render that succeeded: what an export exports
     var renderSeq = 0;
@@ -363,6 +377,7 @@
         for (var tk in t) {
             config[tk] = t[tk];
         }
+        config.look = lookConfig(look).look;
         for (var key in (extra || {})) {
             config[key] = extra[key];
         }
@@ -512,6 +527,13 @@
         if (size) {
             view = actualSize(size.w, size.h, viewport.clientWidth, viewport.clientHeight);
             apply();
+        }
+    };
+
+    root.gapHunterSetLook = function (name) {
+        look = lookConfig(name).look;
+        if (lastText !== null) {
+            root.gapHunterRender(lastText);
         }
     };
 
