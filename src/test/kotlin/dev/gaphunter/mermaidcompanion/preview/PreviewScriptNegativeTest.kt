@@ -42,7 +42,7 @@ class PreviewScriptNegativeTest {
                     addEventListener() {}, querySelector() { return null; }, getBoundingClientRect() { return { left: 0, top: 0 }; } });
                 const elements = { viewport: el(), stage: el(), error: el(), 'mermaid-lib': { textContent: '/* bundled mermaid.js */' } };
                 const frames = [];
-                const sent = [], configs = [], images = [];
+                const sent = [], configs = [], images = [], canvases = [];
                 const svgStub = (w, h) => {
                     const attrs = {};
                     const node = { style: {}, viewBox: { baseVal: { width: w, height: h } },
@@ -67,8 +67,11 @@ class PreviewScriptNegativeTest {
                                 return frame;
                             }
                             if (tag === 'canvas') {
-                                return { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {} }),
+                                const canvas = { width: 0, height: 0, fills: 0,
+                                    getContext: () => ({ fillRect() { canvas.fills++; }, drawImage() {} }),
                                     toDataURL: () => canvasAnswer };
+                                canvases.push(canvas);
+                                return canvas;
                             }
                             const holder = { _svg: null, querySelector() { return this._svg; } };
                             Object.defineProperty(holder, 'innerHTML', { set(v) {
@@ -89,7 +92,7 @@ class PreviewScriptNegativeTest {
                 };
                 vm.createContext(sandbox);
                 vm.runInContext(fs.readFileSync(SCRIPT, 'utf8'), sandbox);
-                return { sandbox, sent, configs, images, elements, frames };
+                return { sandbox, sent, configs, images, elements, frames, canvases };
             }
             const flush = () => new Promise((r) => setImmediate(r));
 
@@ -263,6 +266,74 @@ class PreviewScriptNegativeTest {
         await flush();
         assert.ok(pg.sent.includes('syncpng:AAAA'), pg.sent.join());
         assert.strictEqual(pg.images.length, 1);
+        """,
+    )
+
+    @Test
+    fun `PNG options keep only scales 1 to 3 and an explicit true for transparency`() = runNode(
+        """
+        for (const s of [1, 2, 3]) same(p.pngOptions({ scale: s }), { scale: s, transparent: false });
+        for (const bad of [0, 4, -1, 2.5, '2', NaN, Infinity, null, undefined, {}, [2]]) assert.strictEqual(p.pngOptions({ scale: bad }).scale, 2, String(bad));
+        for (const bad of [undefined, null, 'x', 5, true]) same(p.pngOptions(bad), { scale: 2, transparent: false });
+        assert.strictEqual(p.pngOptions({ transparent: true }).transparent, true);
+        for (const bad of ['true', 1, 'yes', {}, false]) assert.strictEqual(p.pngOptions({ transparent: bad }).transparent, false, String(bad));
+        same(['sync', 'copy', undefined, 'save', 'syncx', ''].map(p.exportPrefix), ['sync', 'copy', '', '', '', '']);
+        """,
+    )
+
+    @Test
+    fun `the PNG is drawn at the scale asked for, and the canvas limit is checked at that scale`() = runNode(
+        """
+        const pg = page(async () => ({ svg: '<svg data-size="30000x10"/>' }), 'data:image/png;base64,AAAA');
+        pg.sandbox.gapHunterRender('flowchart LR\n A --> B');
+        await flush();
+        pg.sandbox.gapHunterExportPng('copy', { scale: 2 });
+        await flush();
+        assert.ok(pg.sent.includes('copypng:AAAA'), pg.sent.join());
+        assert.strictEqual(pg.canvases[0].width, 60000);
+        pg.sent.length = 0;
+        pg.sandbox.gapHunterExportPng('copy', { scale: 3 });
+        await flush();
+        assert.strictEqual(pg.canvases.length, 1, 'nothing is drawn past the limit');
+        assert.ok(pg.sent.length === 1 && pg.sent[0].startsWith('copyerror:') && pg.sent[0].includes('30000 x 10 px at 3x'), pg.sent.join());
+        pg.sent.length = 0;
+        pg.sandbox.gapHunterExportPng('copy', { scale: 1 });
+        await flush();
+        assert.strictEqual(pg.canvases[1].width, 30000);
+        assert.strictEqual(pg.canvases[1].height, 10);
+        """,
+    )
+
+    @Test
+    fun `a transparent PNG skips the background, any other answer paints it`() = runNode(
+        """
+        const pg = page(async () => ({ svg: '<svg data-size="300x200"/>' }), 'data:image/png;base64,AAAA');
+        pg.sandbox.gapHunterRender('flowchart LR\n A --> B');
+        await flush();
+        pg.sandbox.gapHunterExportPng('sync', { transparent: true });
+        await flush();
+        pg.sandbox.gapHunterExportPng('sync', { transparent: 'true' });
+        await flush();
+        pg.sandbox.gapHunterExportPng('sync');
+        await flush();
+        same(pg.canvases.map((c) => c.fills), [0, 1, 1]);
+        assert.strictEqual(pg.sent.filter((m) => m === 'syncpng:AAAA').length, 3, pg.sent.join());
+        """,
+    )
+
+    @Test
+    fun `copy answers use their own message kinds`() = runNode(
+        """
+        const pg = page(async () => ({ svg: '<svg data-size="300x200"/>' }), 'data:image/png;base64,AAAA');
+        pg.sandbox.gapHunterExportSvg('copy');
+        pg.sandbox.gapHunterExportPng('copy');
+        assert.ok(pg.sent[0].startsWith('copyerror:Nothing to export yet') && pg.sent[1].startsWith('copyerror:Nothing to export yet'), pg.sent.join());
+        pg.sent.length = 0;
+        pg.sandbox.gapHunterRender('flowchart LR\n A --> B');
+        await flush();
+        pg.sandbox.gapHunterExportSvg('copy');
+        await flush();
+        assert.ok(pg.sent.some((m) => m.startsWith('copysvg:<svg')), pg.sent.join());
         """,
     )
 

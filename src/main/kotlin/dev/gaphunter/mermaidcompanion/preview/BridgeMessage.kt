@@ -27,6 +27,11 @@ sealed interface BridgeMessage {
     class SyncPng(val bytes: ByteArray) : BridgeMessage
     data class SyncFailure(val message: String) : BridgeMessage
 
+    /** Exports for the clipboard: copied, never written to a file. */
+    data class CopySvg(val markup: String) : BridgeMessage
+    class CopyPng(val bytes: ByteArray) : BridgeMessage
+    data class CopyFailure(val message: String) : BridgeMessage
+
     companion object {
         private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte())
 
@@ -51,6 +56,13 @@ sealed interface BridgeMessage {
                     else -> null
                 }
                 "syncerror" -> SyncFailure(body.ifBlank { "Export failed." })
+                "copysvg" -> if (body.trimStart().startsWith("<svg")) CopySvg(body) else CopyFailure("The copied SVG was empty or malformed.")
+                "copypng" -> when (val decoded = decodePng(body)) {
+                    is Png -> CopyPng(decoded.bytes)
+                    is Failure -> CopyFailure(decoded.message)
+                    else -> null
+                }
+                "copyerror" -> CopyFailure(body.ifBlank { "Copy failed." })
                 else -> null
             }
         }

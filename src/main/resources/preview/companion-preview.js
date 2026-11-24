@@ -107,10 +107,30 @@
             width <= MAX_CANVAS_SIDE && height <= MAX_CANVAS_SIDE && width * height <= MAX_CANVAS_AREA;
     }
 
+    /*
+     * PNG options from the plugin: a scale of 1, 2 or 3 (anything else is the default, 2) and
+     * a transparent background (only an explicit true; the theme's background otherwise).
+     */
+    var PNG_SCALES = [1, 2, 3];
+    var DEFAULT_PNG_SCALE = 2;
+
+    function pngOptions(options) {
+        var o = options && typeof options === 'object' ? options : {};
+        return {
+            scale: PNG_SCALES.indexOf(o.scale) >= 0 ? o.scale : DEFAULT_PNG_SCALE,
+            transparent: o.transparent === true
+        };
+    }
+
+    /* The message prefix of an export: Export on Save ('sync'), the clipboard ('copy'), or a save dialog. */
+    function exportPrefix(mode) {
+        return mode === 'sync' || mode === 'copy' ? mode : '';
+    }
+
     var api = {
         MIN_SCALE: MIN_SCALE, MAX_SCALE: MAX_SCALE, FIT_MAX_SCALE: FIT_MAX_SCALE,
         zoomAt: zoomAt, panBy: panBy, fit: fit, actualSize: actualSize, wheelFactor: wheelFactor,
-        isTooLargeStandIn: isTooLargeStandIn, canvasFits: canvasFits
+        isTooLargeStandIn: isTooLargeStandIn, canvasFits: canvasFits, pngOptions: pngOptions, exportPrefix: exportPrefix
     };
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
@@ -145,7 +165,7 @@
      * export from the toolbar and keeps the save dialog.
      */
     function out(mode, kind, payload) {
-        send((mode === 'sync' ? 'sync' : '') + kind + ':' + payload);
+        send(exportPrefix(mode) + kind + ':' + payload);
     }
 
     function apply() {
@@ -188,9 +208,9 @@
         }
     }
 
-    function tooLargeForPng(w, h) {
+    function tooLargeForPng(w, h, scale) {
         return 'PNG export isn\'t possible for a diagram this large (' + Math.round(w) + ' x ' + Math.round(h) +
-            ' px) -- export SVG instead.';
+            ' px at ' + scale + 'x) -- export SVG instead.';
     }
 
     function setError(message) {
@@ -429,7 +449,9 @@
      * exported, so the PNG is rendered separately with htmlLabels off. If a
      * diagram type still taints the canvas, report it instead of failing silently.
      */
-    root.gapHunterExportPng = function (mode) {
+    /* `options`: { scale: 1 | 2 | 3, transparent: true | false }, see pngOptions. */
+    root.gapHunterExportPng = function (mode, options) {
+        var png = pngOptions(options);
         var text = lastGoodText;
         if (text === null) {
             out(mode, 'error', NOTHING_YET);
@@ -447,24 +469,28 @@
             }
             var w = parseFloat(svg.getAttribute('width')) || 800;
             var h = parseFloat(svg.getAttribute('height')) || 600;
-            if (!canvasFits(Math.ceil(w * 2), Math.ceil(h * 2))) {
-                out(mode, 'error', tooLargeForPng(w, h));
+            var cw = Math.ceil(w * png.scale);
+            var ch = Math.ceil(h * png.scale);
+            if (!canvasFits(cw, ch)) {
+                out(mode, 'error', tooLargeForPng(w, h, png.scale));
                 return;
             }
             var bytes = unescape(encodeURIComponent(serialize(svg)));
             var img = new Image();
             img.onload = function () {
                 var canvas = document.createElement('canvas');
-                canvas.width = Math.ceil(w * 2);
-                canvas.height = Math.ceil(h * 2);
+                canvas.width = cw;
+                canvas.height = ch;
                 var ctx = canvas.getContext('2d');
-                ctx.fillStyle = background();
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (!png.transparent) {
+                    ctx.fillStyle = background();
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                 try {
                     var data = canvas.toDataURL('image/png').split(',')[1];
                     if (!data) {
-                        out(mode, 'error', tooLargeForPng(w, h));
+                        out(mode, 'error', tooLargeForPng(w, h, png.scale));
                         return;
                     }
                     out(mode, 'png', data);

@@ -21,6 +21,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
@@ -46,6 +47,7 @@ import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
 import java.awt.BorderLayout
+import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.nio.file.Files
@@ -94,7 +96,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         licensed = { ProGate.isOpen() },
         requestRender = { token -> renderCurrentDocument(token) },
         requestExport = { format ->
-            js(if (format == ExportFormat.SVG) "window.gapHunterExportSvg('sync');" else "window.gapHunterExportPng('sync');")
+            js(if (format == ExportFormat.SVG) "window.gapHunterExportSvg('sync');" else "window.gapHunterExportPng('sync', ${PngOptions.current.toJs()});")
         },
         requestWrite = { format, bytes -> writeSyncExport(format, bytes) },
         report = { status -> showSyncStatus(status) },
@@ -246,6 +248,9 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             is BridgeMessage.SyncSvg -> coordinator.onExport(ExportFormat.SVG, SvgNormalizer.normalize(message.markup).toByteArray(Charsets.UTF_8))
             is BridgeMessage.SyncPng -> coordinator.onExport(ExportFormat.PNG, message.bytes)
             is BridgeMessage.SyncFailure -> coordinator.onExportFailed(message.message)
+            is BridgeMessage.CopySvg -> copyText(message.markup, "SVG markup copied to the clipboard.")
+            is BridgeMessage.CopyPng -> copyPng(message.bytes)
+            is BridgeMessage.CopyFailure -> notify(message.message, NotificationType.WARNING)
         }
     }
 
@@ -328,6 +333,25 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         notify("Diagram exported to ${target.fileName}", NotificationType.INFORMATION)
     }
 
+    private fun copyText(text: String, confirmation: String) {
+        CopyPasteManager.getInstance().setContents(StringSelection(text))
+        notify(confirmation, NotificationType.INFORMATION)
+    }
+
+    private fun copyPng(bytes: ByteArray) {
+        when (val result = ClipboardImage.fromPng(bytes)) {
+            is ClipboardImage.Result.Ready -> {
+                CopyPasteManager.getInstance().setContents(result.image)
+                notify("PNG copied to the clipboard (${result.image.image.width} x ${result.image.image.height} px).", NotificationType.INFORMATION)
+            }
+            is ClipboardImage.Result.TooLarge -> notify(
+                "This PNG is too large to copy (${result.width} x ${result.height} px): use a smaller scale, or export it to a file.",
+                NotificationType.WARNING,
+            )
+            ClipboardImage.Result.NotAnImage -> notify("The PNG could not be copied: it did not decode as an image.", NotificationType.WARNING)
+        }
+    }
+
     private fun notify(content: String, type: NotificationType) {
         NotificationGroupManager.getInstance().getNotificationGroup("Mermaid Companion")
             .createNotification(content, type)
@@ -346,7 +370,19 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 PreviewTheme.entries.forEach { add(ThemeAction(it)) }
             })
             add(SvgExportAction())
-            add(jsAction("Export as PNG", AllIcons.FileTypes.Image, "window.gapHunterExportPng();"))
+            add(PngExportAction())
+            add(DefaultActionGroup("Copy", true).apply {
+                templatePresentation.icon = AllIcons.Actions.Copy
+                PngOptions.SCALES.forEach { add(CopyPngAction(it)) }
+                add(CopySvgAction())
+                add(CopyMarkdownAction())
+            })
+            add(DefaultActionGroup("PNG Options", true).apply {
+                templatePresentation.icon = AllIcons.General.Settings
+                PngOptions.SCALES.forEach { add(PngScaleAction(it)) }
+                addSeparator()
+                add(TransparentBackgroundAction())
+            })
             addSeparator()
             add(DefaultActionGroup("Export on Save (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.MenuSaveall
@@ -461,6 +497,66 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             }
             PreviewTheme.current = theme
             js("window.gapHunterSetTheme('${theme.id}');")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class PngExportAction : DumbAwareAction("Export as PNG", null, AllIcons.FileTypes.Image) {
+        override fun actionPerformed(e: AnActionEvent) = js("window.gapHunterExportPng(undefined, ${PngOptions.current.toJs()});")
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    /** Copies at the scale it names, with the transparent-background choice of PNG Options. */
+    private inner class CopyPngAction(private val scale: Int) : DumbAwareAction("Copy as PNG (${scale}x)") {
+        override fun actionPerformed(e: AnActionEvent) =
+            js("window.gapHunterExportPng('copy', ${PngOptions.current.copy(scale = scale).toJs()});")
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class CopySvgAction : DumbAwareAction("Copy SVG Markup (Pro)") {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (!ProGate.allowsSvgExport()) {
+                CheckLicense.requestLicense("Copying SVG is part of Mermaid Companion Pro, like SVG export. PNG stays free.")
+                return
+            }
+            js("window.gapHunterExportSvg('copy');")
+        }
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class CopyMarkdownAction : DumbAwareAction("Copy as Markdown Code Block") {
+        override fun actionPerformed(e: AnActionEvent) {
+            val text = document?.text
+            if (text == null) {
+                notify("This file's text isn't available, so there is nothing to copy.", NotificationType.WARNING)
+                return
+            }
+            copyText(MarkdownFence.wrap(text), "Markdown code block copied to the clipboard.")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class PngScaleAction(private val scale: Int) : ToggleAction("PNG Scale ${scale}x") {
+        override fun isSelected(e: AnActionEvent): Boolean = PngOptions.current.scale == scale
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (state) PngOptions.current = PngOptions.current.copy(scale = scale)
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class TransparentBackgroundAction : ToggleAction("Transparent Background") {
+        override fun isSelected(e: AnActionEvent): Boolean = PngOptions.current.transparent
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            PngOptions.current = PngOptions.current.copy(transparent = state)
         }
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
     }
