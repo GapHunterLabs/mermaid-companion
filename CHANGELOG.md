@@ -42,6 +42,9 @@
 
 - The plugin description and README list the free and Pro features of this
   version.
+- The IDE's standard error reporter is registered: an error or a UI freeze
+  in this plugin can be sent to JetBrains Marketplace, only when you choose
+  to send it. `PRIVACY.md` describes what such a report contains.
 
 ## [2026.3.0]
 

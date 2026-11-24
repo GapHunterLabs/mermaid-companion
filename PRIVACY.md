@@ -1,6 +1,6 @@
 # Privacy Policy: Mermaid Companion
 
-**Effective date:** 2026-10-26
+**Effective date:** 2026-11-24
 
 Mermaid Companion is a Gap Hunter Labs plugin for IntelliJ Platform IDEs.
 This policy is short because the plugin's design makes it short: there
@@ -10,7 +10,8 @@ is nothing to disclose beyond what's below.
 
 **Nothing.** Mermaid Companion does not collect, transmit, or sell
 any data: no source code, no file contents, no usage analytics, no
-telemetry, no crash reports, no personally identifiable information.
+telemetry, no personally identifiable information. The one exception is an
+error report that you choose to send from the IDE (see "Error reports").
 
 ## What it keeps on your machine
 
@@ -42,10 +43,27 @@ them: a click on a linked node moves the caret to that node instead, and the
 preview refuses to load any other page or open any window. Copying a diagram
 (PNG, SVG or a Markdown code block) puts it on your clipboard and nowhere else.
 
+## Error reports (only if you send them)
+
+Mermaid Companion registers the IDE's standard JetBrains Marketplace error
+reporter. When the IDE attributes an exception or a UI freeze to this plugin,
+it can send a report to JetBrains Marketplace, where I can read it:
+
+- Only when you send it from the IDE's error dialog, or when you have turned on
+  automatic error reporting in the IDE settings.
+- The IDE builds and sends the report, not this plugin. For an exception it
+  carries the stack trace and the IDE and plugin versions; for a freeze, thread
+  dumps and, when the IDE adds them, a performance snapshot and metrics; plus
+  anything you write in the dialog.
+- It is handled under JetBrains' privacy policy and the JetBrains Marketplace
+  terms. I use these reports only to fix the plugin.
+
 ## Third parties
 
-None. Mermaid Companion has no third-party SDKs, no analytics libraries,
-no ad networks, no external dependencies that phone home.
+None inside the plugin. Mermaid Companion has no third-party SDKs, no
+analytics libraries, no ad networks, no external dependencies that phone
+home. An error report you choose to send goes to JetBrains Marketplace, as
+described above.
 
 ## Changes to this policy
 
