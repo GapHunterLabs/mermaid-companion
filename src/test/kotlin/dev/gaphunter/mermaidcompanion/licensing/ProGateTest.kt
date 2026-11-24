@@ -48,6 +48,18 @@ class ProGateTest {
     }
 
     @Test
+    fun `PNG at 3x and transparent PNG need a license, even where themes and SVG were kept`() {
+        ProGate.legacyThemesCheck = { true }
+        ProGate.legacySvgCheck = { true }
+        ProGate.licenseCheck = { false }
+        assertFalse(ProGate.allowsProPng())
+        ProGate.licenseCheck = { null }
+        assertFalse(ProGate.allowsProPng())
+        ProGate.licenseCheck = { true }
+        assertTrue(ProGate.allowsProPng())
+    }
+
+    @Test
     fun `SVG export needs a license on a new installation`() {
         ProGate.licenseCheck = { false }
         ProGate.legacySvgCheck = { false }

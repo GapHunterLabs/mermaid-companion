@@ -61,6 +61,42 @@ class CopyAndPngOptionsTest {
         }
     }
 
+    @Test
+    fun `without Pro 3x becomes 2x and the background stays opaque`() {
+        assertEquals(PngOptions(2, false), PngOptions(3, false).forTier(false))
+        assertEquals(PngOptions(2, false), PngOptions(3, true).forTier(false))
+        assertEquals(PngOptions(2, false), PngOptions(2, true).forTier(false))
+        assertEquals(PngOptions(1, false), PngOptions(1, true).forTier(false))
+    }
+
+    @Test
+    fun `the free scales pass through without Pro unchanged`() {
+        for (scale in 1..PngOptions.FREE_MAX_SCALE) {
+            assertEquals(PngOptions(scale, false), PngOptions(scale, false).forTier(false))
+            assertEquals(false, PngOptions(scale, false).needsPro)
+        }
+    }
+
+    @Test
+    fun `with Pro every scale and transparency pass through`() {
+        for (scale in PngOptions.SCALES) {
+            for (transparent in listOf(true, false)) {
+                val options = PngOptions(scale, transparent)
+                assertEquals(options, options.forTier(true))
+                assertEquals(scale > 2 || transparent, options.needsPro)
+            }
+        }
+    }
+
+    @Test
+    fun `what is drawn without Pro never needs Pro`() {
+        for (scale in PngOptions.SCALES) {
+            for (transparent in listOf(true, false)) {
+                assertEquals(false, PngOptions(scale, transparent).forTier(false).needsPro)
+            }
+        }
+    }
+
     // --- MarkdownFence --------------------------------------------------------------------------
 
     @Test

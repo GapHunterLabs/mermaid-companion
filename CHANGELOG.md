@@ -4,6 +4,45 @@
 
 ## [Unreleased]
 
+## [2026.4.0]
+
+### Added
+
+- **Click a shape in the preview to jump to its line:** flowchart nodes and
+  subgraphs, classes, states and their notes, ER entities, requirements,
+  mindmap nodes and sequence participants. A drag still pans; a name that
+  can't be found is reported in the status bar.
+- **Copy menu:** PNG at 1x or 2x and a Markdown code block (free), PNG at 3x
+  and SVG markup (Pro). A PNG over 40 megapixels is refused instead of
+  filling the clipboard.
+- **PNG Options:** 1x or 2x for export and copy (free); 3x and a transparent
+  background (Pro).
+- **Keyword colors for every diagram type**, a color for the word that opens
+  the diagram, and a "Mermaid Companion" page in the color scheme settings.
+  A word is colored only in the diagram types that use it.
+- **Pro:** three theme presets (High Contrast, Blueprint, Monochrome), six
+  more of mermaid.js's own themes (Neo, Neo Dark, Redux, Redux Dark, Redux
+  Color, Redux Dark Color), and diagram looks (Classic, Hand-Drawn, Neo).
+  Installations that kept the diagram themes get these too.
+
+### Fixed
+
+- **A link in a diagram (`click A "https://..."`) opened the web page inside
+  the preview**, a network request the privacy policy says the plugin never
+  makes. The preview now never follows a link, never loads another page and
+  never opens a window.
+- **Exports of an unchanged diagram could differ between saves.** Every
+  export now renders in a page of its own, so Export on Save leaves an
+  unchanged diagram's SVG and PNG, and your Git history, alone. The one
+  exception is a gitGraph commit without an `id:`.
+- Ids that mermaid.js generates for icons are numbered in order in SVG
+  exports, so they no longer change from one export to the next.
+
+### Changed
+
+- The plugin description and README list the free and Pro features of this
+  version.
+
 ## [2026.3.0]
 
 ### Changed
@@ -123,7 +162,7 @@
   `Mermaid` Language ID this plugin used, causing an
   `ImplementationConflictException` the moment both were installed
   together. The internal Language ID (and matching FileType name) is
-  now `MermaidCompanion` — no user-visible change (file associations,
+  now `MermaidCompanion`, with no user-visible change (file associations,
   extensions, and the Preview tab all work exactly as before).
 
 ## [0.1.1]

@@ -16,9 +16,20 @@ data class PngOptions(val scale: Int = DEFAULT_SCALE, val transparent: Boolean =
     /** The object literal companion-preview.js reads: only numbers and booleans, nothing from the user. */
     fun toJs(): String = "{scale: $scale, transparent: $transparent}"
 
+    /** Whether drawing this needs Pro: a scale above [FREE_MAX_SCALE] or a transparent background. */
+    val needsPro: Boolean get() = scale > FREE_MAX_SCALE || transparent
+
+    /**
+     * What may actually be drawn. Without Pro, 3x becomes 2x and the background stays opaque, so a
+     * choice stored while a license was active never outlives it.
+     */
+    fun forTier(pro: Boolean): PngOptions = if (pro) this else PngOptions(minOf(scale, FREE_MAX_SCALE), false)
+
     companion object {
         val SCALES = listOf(1, 2, 3)
         const val DEFAULT_SCALE = 2
+        /** The largest scale without Pro. */
+        const val FREE_MAX_SCALE = 2
         private const val SCALE_KEY = "dev.gaphunter.mermaidcompanion.pngScale"
         private const val TRANSPARENT_KEY = "dev.gaphunter.mermaidcompanion.pngTransparent"
 

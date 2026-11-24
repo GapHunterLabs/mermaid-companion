@@ -28,4 +28,7 @@ object ProGate {
 
     /** SVG export: a license, or an installation that already had it. PNG export needs neither -- it's free. */
     fun allowsSvgExport(): Boolean = isOpen() || legacySvgCheck()
+
+    /** PNG at 3x or with a transparent background: a license only (no installation ever had them free). */
+    fun allowsProPng(): Boolean = isOpen()
 }
