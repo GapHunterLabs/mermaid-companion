@@ -56,6 +56,7 @@
         <editorHighlighterProvider filetype="MermaidCompanion"
                                     implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidEditorHighlighterProvider"/>
         <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
+        <colorSettingsPage implementation="dev.gaphunter.mermaidcompanion.highlighting.MermaidColorSettingsPage"/>
         <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
         <fileEditorProvider implementation="dev.gaphunter.mermaidcompanion.preview.MermaidPreviewFileEditorProvider"/>
         <postStartupActivity implementation="dev.gaphunter.mermaidcompanion.coexistence.CoexistenceStartupActivity"/>

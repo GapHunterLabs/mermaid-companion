@@ -41,6 +41,12 @@ class SourceLocatorTest {
     }
 
     @Test
+    fun `a directive that spans lines never matches`() {
+        val t = "%%{init: {\n  'B': 1\n}}%%\nflowchart TD\n  A --> B"
+        assertEquals(t.lastIndexOf("B"), SourceLocator.offsetOfName(t, "B"))
+    }
+
+    @Test
     fun `front matter that is never closed is not skipped`() {
         val t = "---\nflowchart TD\n  B --> C"
         assertEquals(at(t, "B"), SourceLocator.offsetOfName(t, "B"))

@@ -26,6 +26,8 @@ object MermaidHighlighterColors {
         createTextAttributesKey("MERMAID_ARROW", DefaultLanguageHighlighterColors.OPERATION_SIGN)
     val KNOWN_KEYWORD: TextAttributesKey =
         createTextAttributesKey("MERMAID_KNOWN_KEYWORD", DefaultLanguageHighlighterColors.KEYWORD)
+    val DIAGRAM_TYPE: TextAttributesKey =
+        createTextAttributesKey("MERMAID_DIAGRAM_TYPE", DefaultLanguageHighlighterColors.METADATA)
     val BAD_CHARACTER: TextAttributesKey =
         createTextAttributesKey("MERMAID_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER)
     val UNTERMINATED_STRING: TextAttributesKey =

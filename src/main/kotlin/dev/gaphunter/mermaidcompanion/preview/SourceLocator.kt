@@ -2,6 +2,7 @@ package dev.gaphunter.mermaidcompanion.preview
 
 import com.intellij.psi.tree.IElementType
 import dev.gaphunter.mermaidcompanion.lang.MermaidLexer
+import dev.gaphunter.mermaidcompanion.lang.MermaidRegions
 import dev.gaphunter.mermaidcompanion.lang.MermaidTokenTypes
 
 /**
@@ -52,6 +53,7 @@ object SourceLocator {
     fun offsetOfName(text: CharSequence, name: String): Int? {
         if (name.isEmpty()) return null
         val from = bodyStart(text)
+        val skip = MermaidRegions.skipped(text)
         // Labels never span lines, so the depth starts over on every line. `previous` is the last
         // token that is not whitespace.
         var depth = 0
@@ -64,7 +66,7 @@ object SourceLocator {
                 t.type in OPENERS -> depth++
                 t.type == MermaidTokenTypes.LBRACE && previous?.type == MermaidTokenTypes.IDENTIFIER && previous.end == t.start -> depth++
                 t.type in CLOSERS -> if (depth > 0) depth--
-                t.type == MermaidTokenTypes.IDENTIFIER && t.start >= from && text.subSequence(t.start, t.end).toString() == name -> {
+                t.type == MermaidTokenTypes.IDENTIFIER && t.start >= from && !skip(t.start) && text.subSequence(t.start, t.end).toString() == name -> {
                     if (depth == 0) return t.start
                     if (firstAnywhere == null) firstAnywhere = t.start
                 }
