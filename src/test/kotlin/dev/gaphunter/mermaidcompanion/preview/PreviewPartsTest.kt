@@ -67,8 +67,14 @@ class PreviewPartsTest {
 
     @Test
     fun themesAreMermaidsOwnAndFallBackToDefault() {
-        val mermaidBuiltIns = setOf("default", "neutral", "forest", "dark", "base")
-        assertTrue(PreviewTheme.entries.all { it.id in mermaidBuiltIns })
+        // mermaid.js's own themes, plus the presets companion-preview.js builds on its base theme
+        // (PreviewScriptNegativeTest checks the page knows exactly these ids).
+        val mermaidBuiltIns = setOf(
+            "default", "neutral", "forest", "dark", "neo", "neo-dark", "redux", "redux-dark", "redux-color", "redux-dark-color",
+        )
+        val pagePresets = setOf("high-contrast", "blueprint", "monochrome")
+        assertTrue(PreviewTheme.entries.all { it.id in mermaidBuiltIns || it.id in pagePresets })
+        assertEquals(mermaidBuiltIns + pagePresets, PreviewTheme.entries.map { it.id }.toSet())
         assertEquals(PreviewTheme.entries.size, PreviewTheme.entries.map { it.id }.toSet().size)
         assertEquals(PreviewTheme.DARK, PreviewTheme.fromId("dark"))
         assertEquals(PreviewTheme.DEFAULT, PreviewTheme.fromId(null))

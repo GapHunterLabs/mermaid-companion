@@ -8,7 +8,7 @@ package dev.gaphunter.mermaidcompanion.preview
  * PreviewPageTest).
  */
 object PreviewPage {
-    val ELEMENT_IDS = listOf("viewport", "stage", "error")
+    val ELEMENT_IDS = listOf("viewport", "stage", "error", "mermaid-lib")
 
     val companionScript: String by lazy {
         val stream = PreviewPage::class.java.getResourceAsStream("/preview/companion-preview.js")
@@ -23,6 +23,7 @@ object PreviewPage {
               html, body { margin: 0; height: 100%; overflow: hidden; background: #ffffff; }
               #viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; }
               #stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+              #stage .node, #stage .cluster, #stage .actor, #stage .actor-man { cursor: pointer; }
               #error { display: none; position: absolute; left: 0; right: 0; top: 0; z-index: 1;
                        padding: 4px 8px; font: 12px sans-serif; background: #fdecea; color: #611a15; }
             </style>
@@ -30,7 +31,7 @@ object PreviewPage {
           <body>
             <div id="error"></div>
             <div id="viewport"><div id="stage"></div></div>
-            <script>$mermaidScript</script>
+            <script id="mermaid-lib">$mermaidScript</script>
             <script>$companionScript</script>
           </body>
         </html>

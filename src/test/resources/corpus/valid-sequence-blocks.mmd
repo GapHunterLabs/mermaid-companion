@@ -1,0 +1,13 @@
+sequenceDiagram
+    Alice->>John: Hello John
+    loop Every minute
+        John-->>Alice: Great!
+    end
+    alt is sick
+        Bob->>Alice: Not so good
+    else is well
+        Bob->>Alice: Feeling fresh
+    end
+    opt Extra
+        Bob->>Alice: Thanks
+    end

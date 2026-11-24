@@ -67,6 +67,14 @@ intellijPlatform {
     }
 }
 
+// Heavy stress tests (MermaidCheckerStressTest) are skipped unless the build is run with
+// -Pstress=true; the property is a task input, so turning it on reruns the tests.
+tasks.test {
+    val stress = providers.gradleProperty("stress").orElse("false")
+    inputs.property("mermaidStress", stress)
+    systemProperty("mermaid.stress", stress.get())
+}
+
 // Manual coexistence check: IntelliJ IDEA 2026.2 bundles JetBrains's own
 // Mermaid plugin, which the default runIde IDE (2025.2) doesn't have.
 // `./gradlew runIdeWithBundledMermaid` starts that IDE with this plugin

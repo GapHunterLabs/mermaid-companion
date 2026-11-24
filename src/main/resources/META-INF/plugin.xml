@@ -10,23 +10,26 @@
          release-date no earlier release used.
          Do not use a literal double hyphen anywhere in this comment, the XML
          spec forbids it inside comments and patchPluginXml will crash. -->
-    <product-descriptor code="PMERMAIDCOMPANI" release-date="20261026" release-version="20263" optional="true"/>
+    <product-descriptor code="PMERMAIDCOMPANI" release-date="20261123" release-version="20264" optional="true"/>
     <description><![CDATA[
-        <p>Validation and live preview for Mermaid diagram files (.mmd, .mermaid): real syntax errors in the editor, and a preview tab with zoom and PNG export. Rendering uses a bundled copy of mermaid.js, with no network calls.</p>
+        <p>A live preview for Mermaid diagram files (.mmd, .mermaid): zoom and pan, click a shape to jump to its line, copy or export the diagram, and real syntax errors in the editor. Rendering uses a bundled copy of mermaid.js, with no network calls.</p>
         <p><b>Free</b></p>
         <ul>
-          <li><b>Syntax highlighting and validation</b> for flowchart, sequence and class diagrams: unterminated strings, unmatched or mismatched node-shape brackets, and <code>subgraph</code> blocks without <code>end</code>. Non-ASCII identifiers and labels are handled like any other.</li>
           <li><b>Preview tab</b> next to the editor: zoom with Ctrl+mouse wheel or pinch, pan by dragging, fit and 100% buttons.</li>
-          <li><b>PNG export</b> of the rendered diagram, at 2x resolution.</li>
+          <li><b>Click a shape to jump to its line:</b> flowchart nodes and subgraphs, classes, states, ER entities, requirements, mindmap nodes and sequence participants. Links inside a diagram never open, and the preview never loads another page.</li>
+          <li><b>Copy to the clipboard</b> as a PNG (1x or 2x) or as a Markdown code block ready for a README, and <b>PNG export</b> at 1x or 2x.</li>
+          <li><b>Keyword colors for every diagram type</b>, with their own page in the color scheme settings, and <b>syntax validation</b> for flowchart, sequence and class diagrams: unterminated strings, unmatched or mismatched node-shape brackets, and <code>subgraph</code> blocks without <code>end</code>. Non-ASCII identifiers and labels are handled like any other.</li>
           <li><b>Works alongside the JetBrains Mermaid plugin:</b> choose once which editor opens Mermaid files, and switch any time from the Tools menu.</li>
         </ul>
         <p><b>Mermaid Companion Pro</b> (paid, with a free trial)</p>
         <ul>
-          <li><b>SVG export</b> of the rendered diagram.</li>
-          <li><b>Diagram themes</b> (Default, Neutral, Forest, Dark), independent of the IDE theme: a light, printable diagram in a dark IDE.</li>
-          <li><b>Export on Save:</b> every save re-renders the diagram and rewrites its SVG and/or PNG next to the file. A diagram that fails to render leaves the previous export untouched, and an unchanged diagram leaves the file, and your Git history, alone. Sync Now and the last sync time are in the preview toolbar.</li>
+          <li><b>SVG export</b> and <b>Copy SVG Markup</b>.</li>
+          <li><b>13 diagram themes</b>, independent of the IDE theme: mermaid.js's ten (Default, Neutral, Forest, Dark, Neo, Redux and their variants) plus High Contrast, Blueprint and Monochrome, with text contrast of 10:1 or more. A theme set in the diagram itself always wins.</li>
+          <li><b>Diagram looks:</b> Classic, Hand-Drawn and Neo. Hand-Drawn changes flowcharts, class, state and ER diagrams.</li>
+          <li><b>PNG at 3x and with a transparent background</b>, for export, Export on Save and the clipboard.</li>
+          <li><b>Export on Save:</b> every save re-renders the diagram and rewrites its SVG and/or PNG next to the file. A diagram that fails to render leaves the previous export untouched, and an unchanged diagram leaves the file, and your Git history, alone (for gitGraph, give each commit an id: mermaid.js names commits without one at random). Sync Now and the last sync time are in the preview toolbar.</li>
         </ul>
-        <p>Diagram themes were free before version 2026.2.0; any installation that ran 2026.2.0 or later before November 2, 2026 keeps them without a license. SVG export was free before version 2026.3.0; any installation that runs 2026.3.0 or later before November 9, 2026 keeps it without a license. PNG export is free either way.</p>
+        <p>Diagram themes were free before version 2026.2.0; any installation that ran 2026.2.0 or later before November 2, 2026 keeps them without a license. SVG export was free before version 2026.3.0; any installation that runs 2026.3.0 or later before November 9, 2026 keeps it without a license. Those installations get the new themes and the diagram looks too. PNG at 1x and 2x is free either way.</p>
         <p><a href="https://github.com/GapHunterLabs/mermaid-companion">Documentation</a> · <a href="https://github.com/GapHunterLabs/mermaid-companion/issues">Report an issue</a></p>
     ]]></description>
 
@@ -40,6 +43,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <notificationGroup id="Mermaid Companion" displayType="BALLOON"/>
+        <errorHandler implementation="com.intellij.diagnostic.JetBrainsMarketplaceErrorReportSubmitter"/>
         <!-- language/filetype values renamed from "Mermaid" to
              "MermaidCompanion": JetBrains bundles native Mermaid support
              (com.intellij.mermaid) as of IU-262.9437.65 using the same
@@ -56,6 +60,7 @@
         <editorHighlighterProvider filetype="MermaidCompanion"
                                     implementationClass="dev.gaphunter.mermaidcompanion.lang.MermaidEditorHighlighterProvider"/>
         <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidKeywordAnnotator"/>
+        <colorSettingsPage implementation="dev.gaphunter.mermaidcompanion.highlighting.MermaidColorSettingsPage"/>
         <annotator language="MermaidCompanion" implementationClass="dev.gaphunter.mermaidcompanion.highlighting.MermaidSyntaxAnnotator"/>
         <fileEditorProvider implementation="dev.gaphunter.mermaidcompanion.preview.MermaidPreviewFileEditorProvider"/>
         <postStartupActivity implementation="dev.gaphunter.mermaidcompanion.coexistence.CoexistenceStartupActivity"/>

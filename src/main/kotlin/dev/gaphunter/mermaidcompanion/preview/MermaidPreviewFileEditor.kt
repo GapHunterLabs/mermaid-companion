@@ -21,6 +21,9 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.wm.StatusBar
+import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
@@ -44,8 +47,12 @@ import dev.gaphunter.mermaidcompanion.sync.SyncWriter
 import dev.gaphunter.mermaidcompanion.sync.WriteResult
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
+import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
+import org.cef.network.CefRequest
 import java.awt.BorderLayout
+import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
 import java.io.IOException
 import java.nio.file.Files
@@ -94,7 +101,7 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         licensed = { ProGate.isOpen() },
         requestRender = { token -> renderCurrentDocument(token) },
         requestExport = { format ->
-            js(if (format == ExportFormat.SVG) "window.gapHunterExportSvg('sync');" else "window.gapHunterExportPng('sync');")
+            js(if (format == ExportFormat.SVG) "window.gapHunterExportSvg('sync');" else "window.gapHunterExportPng('sync', ${pngOptions().toJs()});")
         },
         requestWrite = { format, bytes -> writeSyncExport(format, bytes) },
         report = { status -> showSyncStatus(status) },
@@ -192,12 +199,29 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 }
             })
 
+        // The preview never navigates away from its page or opens windows (see NavigationGuard).
+        newBrowser.jbCefClient.addRequestHandler(object : CefRequestHandlerAdapter() {
+            override fun onBeforeBrowse(
+                browser: CefBrowser?, frame: CefFrame?, request: CefRequest?, userGesture: Boolean, isRedirect: Boolean,
+            ): Boolean = NavigationGuard.cancelNavigation(frame?.isMain == true, pageLoaded).also { cancel ->
+                // never the address: it comes from the diagram, and the log only needs to show the guard held
+                if (cancel) thisLogger().info("Mermaid Companion preview: blocked a navigation away from the preview")
+            }
+        }, newBrowser.cefBrowser)
+        newBrowser.jbCefClient.addLifeSpanHandler(object : CefLifeSpanHandlerAdapter() {
+            override fun onBeforePopup(browser: CefBrowser?, frame: CefFrame?, targetUrl: String?, targetFrameName: String?): Boolean =
+                NavigationGuard.cancelPopup(targetUrl).also { cancel ->
+                    if (cancel) thisLogger().info("Mermaid Companion preview: blocked a new window")
+                }
+        }, newBrowser.cefBrowser)
+
         newBrowser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
                 if (!frame.isMain) return
                 pageLoaded = true
                 thisLogger().info("Mermaid Companion preview: page loaded")
                 js("window.gapHunterBridge = function(p) { ${bridge.inject("p")} };")
+                js("window.gapHunterSetLook('${lookIdForPageLoad()}');")
                 js("window.gapHunterSetTheme('${themeIdForPageLoad()}');")
                 renderCurrentDocument()
             }
@@ -246,6 +270,11 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             is BridgeMessage.SyncSvg -> coordinator.onExport(ExportFormat.SVG, SvgNormalizer.normalize(message.markup).toByteArray(Charsets.UTF_8))
             is BridgeMessage.SyncPng -> coordinator.onExport(ExportFormat.PNG, message.bytes)
             is BridgeMessage.SyncFailure -> coordinator.onExportFailed(message.message)
+            is BridgeMessage.CopySvg -> copyText(message.markup, "SVG markup copied to the clipboard.")
+            is BridgeMessage.CopyPng -> copyPng(message.bytes)
+            is BridgeMessage.CopyFailure -> notify(message.message, NotificationType.WARNING)
+            is BridgeMessage.GoToName -> goTo(document?.let { SourceLocator.offsetOfName(it.charsSequence, message.name) }, message.name)
+            is BridgeMessage.GoToMindmapNode -> goTo(document?.let { SourceLocator.offsetOfMindmapNode(it.charsSequence, message.index) }, "node ${message.index + 1}")
         }
     }
 
@@ -328,6 +357,44 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         notify("Diagram exported to ${target.fileName}", NotificationType.INFORMATION)
     }
 
+    /**
+     * Moves the caret to [offset] in the text editor of this file. A name the text no longer holds
+     * (the diagram changed since it rendered) is reported in the status bar, not in a balloon, so
+     * clicking around never piles up notifications.
+     */
+    private fun goTo(offset: Int?, what: String) {
+        val length = document?.textLength ?: 0
+        if (offset == null || offset < 0 || offset > length) {
+            StatusBar.Info.set("Mermaid Companion: couldn't find ${what.take(80)} in the diagram's text.", project)
+            thisLogger().info("Mermaid Companion preview: a clicked name was not found in the text")
+            return
+        }
+        OpenFileDescriptor(project, file, offset).navigate(true)
+        val line = document?.getLineNumber(offset)?.plus(1)
+        thisLogger().info("Mermaid Companion preview: moved the caret to line $line")
+    }
+
+    private fun copyText(text: String, confirmation: String) {
+        CopyPasteManager.getInstance().setContents(StringSelection(text))
+        thisLogger().info("Mermaid Companion preview: copied ${text.length} characters of text")
+        notify(confirmation, NotificationType.INFORMATION)
+    }
+
+    private fun copyPng(bytes: ByteArray) {
+        when (val result = ClipboardImage.fromPng(bytes)) {
+            is ClipboardImage.Result.Ready -> {
+                CopyPasteManager.getInstance().setContents(result.image)
+                thisLogger().info("Mermaid Companion preview: copied a PNG of ${result.image.image.width}x${result.image.image.height}")
+                notify("PNG copied to the clipboard (${result.image.image.width} x ${result.image.image.height} px).", NotificationType.INFORMATION)
+            }
+            is ClipboardImage.Result.TooLarge -> notify(
+                "This PNG is too large to copy (${result.width} x ${result.height} px): use a smaller scale, or export it to a file.",
+                NotificationType.WARNING,
+            )
+            ClipboardImage.Result.NotAnImage -> notify("The PNG could not be copied: it did not decode as an image.", NotificationType.WARNING)
+        }
+    }
+
     private fun notify(content: String, type: NotificationType) {
         NotificationGroupManager.getInstance().getNotificationGroup("Mermaid Companion")
             .createNotification(content, type)
@@ -344,9 +411,23 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             add(DefaultActionGroup("Diagram Theme (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.Colors
                 PreviewTheme.entries.forEach { add(ThemeAction(it)) }
+                addSeparator("Look")
+                DiagramLook.entries.forEach { add(LookAction(it)) }
             })
             add(SvgExportAction())
-            add(jsAction("Export as PNG", AllIcons.FileTypes.Image, "window.gapHunterExportPng();"))
+            add(PngExportAction())
+            add(DefaultActionGroup("Copy", true).apply {
+                templatePresentation.icon = AllIcons.Actions.Copy
+                PngOptions.SCALES.forEach { add(CopyPngAction(it)) }
+                add(CopySvgAction())
+                add(CopyMarkdownAction())
+            })
+            add(DefaultActionGroup("PNG Options", true).apply {
+                templatePresentation.icon = AllIcons.General.Settings
+                PngOptions.SCALES.forEach { add(PngScaleAction(it)) }
+                addSeparator()
+                add(TransparentBackgroundAction())
+            })
             addSeparator()
             add(DefaultActionGroup("Export on Save (Pro)", true).apply {
                 templatePresentation.icon = AllIcons.Actions.MenuSaveall
@@ -451,6 +532,35 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         PreviewTheme.DEFAULT.id
     }
 
+    /** The saved look with Pro (or a legacy installation that kept themes); classic otherwise. */
+    private fun effectiveLook(): DiagramLook =
+        if (ProGate.allowsThemes()) DiagramLook.current else DiagramLook.CLASSIC
+
+    /** Like themeIdForPageLoad: never lets a settings or license failure end the first render. */
+    private fun lookIdForPageLoad(): String = try {
+        effectiveLook().id
+    } catch (e: Exception) {
+        thisLogger().warn("Mermaid Companion preview: couldn't read the diagram look, using classic", e)
+        DiagramLook.CLASSIC.id
+    } catch (e: LinkageError) {
+        thisLogger().warn("Mermaid Companion preview: couldn't read the diagram look, using classic", e)
+        DiagramLook.CLASSIC.id
+    }
+
+    private inner class LookAction(private val look: DiagramLook) : ToggleAction(look.displayName) {
+        override fun isSelected(e: AnActionEvent): Boolean = effectiveLook() == look
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (!state) return
+            if (!ProGate.allowsThemes()) {
+                CheckLicense.requestLicense("Diagram looks are part of Mermaid Companion Pro, with the diagram themes.")
+                return
+            }
+            DiagramLook.current = look
+            js("window.gapHunterSetLook('${look.id}');")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
     private inner class ThemeAction(private val theme: PreviewTheme) : ToggleAction(theme.displayName) {
         override fun isSelected(e: AnActionEvent): Boolean = effectiveTheme() == theme
         override fun setSelected(e: AnActionEvent, state: Boolean) {
@@ -461,6 +571,91 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             }
             PreviewTheme.current = theme
             js("window.gapHunterSetTheme('${theme.id}');")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class PngExportAction : DumbAwareAction("Export as PNG", null, AllIcons.FileTypes.Image) {
+        override fun actionPerformed(e: AnActionEvent) = js("window.gapHunterExportPng(undefined, ${pngOptions().toJs()});")
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    /**
+     * The PNG options every export and copy sends to the page: the stored choice (or [scale] for a
+     * copy at a named scale), cut down to what the license allows.
+     */
+    private fun pngOptions(scale: Int? = null): PngOptions {
+        val stored = PngOptions.current
+        return (if (scale == null) stored else stored.copy(scale = scale)).forTier(ProGate.allowsProPng())
+    }
+
+    private fun proPngLabel(scale: Int): String = if (scale > PngOptions.FREE_MAX_SCALE) "${scale}x, Pro" else "${scale}x"
+
+    /** Copies at the scale it names, with the transparent-background choice of PNG Options. */
+    private inner class CopyPngAction(private val scale: Int) : DumbAwareAction("Copy as PNG (${proPngLabel(scale)})") {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (scale > PngOptions.FREE_MAX_SCALE && !ProGate.allowsProPng()) {
+                CheckLicense.requestLicense("PNG at ${scale}x is part of Mermaid Companion Pro. 1x and 2x stay free.")
+                return
+            }
+            js("window.gapHunterExportPng('copy', ${pngOptions(scale).toJs()});")
+        }
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class CopySvgAction : DumbAwareAction("Copy SVG Markup (Pro)") {
+        override fun actionPerformed(e: AnActionEvent) {
+            if (!ProGate.allowsSvgExport()) {
+                CheckLicense.requestLicense("Copying SVG is part of Mermaid Companion Pro, like SVG export. PNG stays free.")
+                return
+            }
+            js("window.gapHunterExportSvg('copy');")
+        }
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = pageLoaded
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class CopyMarkdownAction : DumbAwareAction("Copy as Markdown Code Block") {
+        override fun actionPerformed(e: AnActionEvent) {
+            val text = document?.text
+            if (text == null) {
+                notify("This file's text isn't available, so there is nothing to copy.", NotificationType.WARNING)
+                return
+            }
+            copyText(MarkdownFence.wrap(text), "Markdown code block copied to the clipboard.")
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class PngScaleAction(private val scale: Int) : ToggleAction("PNG Scale ${proPngLabel(scale)}") {
+        override fun isSelected(e: AnActionEvent): Boolean = pngOptions().scale == scale
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (!state) return
+            if (scale > PngOptions.FREE_MAX_SCALE && !ProGate.allowsProPng()) {
+                CheckLicense.requestLicense("PNG at ${scale}x is part of Mermaid Companion Pro. 1x and 2x stay free.")
+                return
+            }
+            PngOptions.current = PngOptions.current.copy(scale = scale)
+        }
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+    }
+
+    private inner class TransparentBackgroundAction : ToggleAction("Transparent Background (Pro)") {
+        override fun isSelected(e: AnActionEvent): Boolean = pngOptions().transparent
+        override fun setSelected(e: AnActionEvent, state: Boolean) {
+            if (state && !ProGate.allowsProPng()) {
+                CheckLicense.requestLicense("A transparent PNG background is part of Mermaid Companion Pro.")
+                return
+            }
+            PngOptions.current = PngOptions.current.copy(transparent = state)
         }
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
     }

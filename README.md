@@ -1,10 +1,12 @@
 # Mermaid Companion
 
-Syntax highlighting and real syntax validation for `.mmd`/`.mermaid`
-diagram source files (flowchart, sequence, and class diagrams), a live
-preview rendered by mermaid.js with PNG export, and -- in Mermaid Companion
-Pro -- SVG export, diagram themes and Export on Save, which keeps the
-diagram's SVG/PNG export up to date every time you save.
+A live preview for `.mmd`/`.mermaid` diagram files in JetBrains IDEs,
+rendered by a bundled copy of mermaid.js: zoom and pan, click a shape to
+jump to its line, copy or export the diagram as PNG, and keyword colors for
+every diagram type. Syntax validation catches real errors in flowchart,
+sequence and class diagrams. Mermaid Companion Pro adds SVG export, diagram
+themes and looks, PNG at 3x or with a transparent background, and Export on
+Save, which rewrites the diagram's SVG/PNG every time you save.
 
 ![Mermaid Companion: live preview for Mermaid diagrams, and SVG/PNG exports that update on every save](docs/media/hero.gif)
 
@@ -12,107 +14,145 @@ Each feature on its own:
 [real syntax validation](docs/media/01-validation.gif) ·
 [clearer preview errors](docs/media/02-error-bar.gif) ·
 [live preview, zoom & pan](docs/media/03-preview-zoom.gif) ·
-[diagram themes (Pro)](docs/media/04-themes.gif) ·
+[click a shape, jump to its line](docs/media/06-click-to-source.gif) ·
+[copy to the clipboard](docs/media/07-copy.gif) ·
+[diagram themes and looks (Pro)](docs/media/04-themes.gif) ·
 [Export on Save (Pro)](docs/media/05-export-on-save.gif)
 
 ## Why it exists
 
-**Mermaid Studio** (JetBrains Marketplace id 29870), 11,168 downloads,
-paid, vendor Tachi Labs. Real, verbatim reviewer complaints:
+JetBrains's own Mermaid plugin (1,711,272 downloads on November 23, 2026)
+comes bundled with IntelliJ IDEA, PyCharm, WebStorm and GoLand 2026.3. It is
+a rich editor, and its Marketplace reviews keep asking for the same things
+in the preview: zoom (24 reviews), export (15) and a diagram theme that
+doesn't follow the IDE (5), as in *"...add zoom to this... Ctrl +
+mouse scroll doesn't work either"* and *"dark editor theme but want to
+create a printable mermaid diagram"*. This plugin's preview does all three,
+and works next to the bundled editor instead of replacing it.
+
+**Mermaid Studio** (JetBrains Marketplace id 29870, 16,419 downloads, paid,
+vendor Tachi Labs) has reviews like these:
 
 - *"the plugin shows false warnings for valid non-ASCII subgraph
   identifiers... e.g. for subgraph á it warns for 'Subgraph identifier á
-  contains special characters...'"* (2026-02-16, 2026-02-23 -- the same
-  bug persisted across two separate reviews)
+  contains special characters...'"* (2026-02-16 and 2026-02-23: the same
+  bug in two separate reviews)
 - *"shows false errors for valid node shapes where the node contains
-  non-ASCII characters"* -- valid nested quotes, accepted by
-  mermaid.live, marked as an error
-- *"It opens and shows me a bunch of icons on page. That's it. No other
-  functionality at all."* (1 star, 2026-03-30)
+  non-ASCII characters"*: valid nested quotes, accepted by mermaid.live,
+  marked as an error.
 
 ## Why built this way
 
-- **Unicode-aware identifier lexing, structurally, not as a special
-  case.** `MermaidLexer.scanIdentifier` uses `Char.isLetterOrDigit`
-  (Unicode-aware) and there is no separate "is this identifier valid"
-  ASCII character-class check anywhere in this plugin. The competitor's
-  bug -- flagging `subgraph á` or a café/日本語 label as invalid -- has
-  nowhere to hide in this design, and `MermaidSyntaxCheckerTest` has
-  fixtures reproducing the exact reported cases and asserting zero
-  issues.
-- **Real validation, not just "we don't check anything so nothing is
-  ever wrong."** `MermaidSyntaxChecker` tracks unterminated string
-  literals, unmatched/mismatched node-shape brackets (`[]`/`()`/`{}`,
-  with proper LIFO kind-matching so valid nested shapes like
-  `id[(cylinder)]` are never flagged), and `subgraph` blocks missing
-  their `end` -- genuine syntax errors, checked correctly against real
-  Mermaid grammar instead of a naive ASCII regex.
-- **Pure-function checker, off any UI thread concern.**
-  `MermaidSyntaxChecker.check(text)` is a plain function over text (drives
-  `MermaidLexer`'s token stream once), directly unit-testable without a
-  platform test fixture; the Annotator is a thin per-file wrapper around
-  it.
-- **Visual preview directly answers "no other functionality at all."**
-  A "Preview" tab renders the diagram via the real, bundled mermaid.js
-  (pinned 11.16.1, MIT-licensed, downloaded once and committed --
-  `resources/mermaid/`, never fetched at runtime) inside a `JBCefBrowser`.
-  First and only use of JCEF in this catalog: it's the one dependency
-  worth accepting, since hand-rolling graph layout (Sugiyama/dagre-style)
-  would be months of work and look worse than the real thing -- exactly
-  the "functionality at half-measure" risk this plugin exists to avoid.
-  Re-renders are debounced (~300ms after the last keystroke), and if this
-  IDE build doesn't support JCEF, the tab shows a plain fallback message
-  instead -- the rest of the plugin (highlighting, validation) is
-  completely unaffected either way.
-- **Zoom, pan, themes and export where reviewers of the bundled plugin
-  keep asking for them.** JetBrains's own Mermaid plugin (1.6M+ downloads,
-  bundled with IntelliJ IDEA from 2026.2) is a much richer *editor*, but
-  its Marketplace reviews through August 2026 repeatedly ask for preview
-  zoom/pan ("Please can we add zoom to this... Ctrl + mouse scroll doesn't
-  work either"), a diagram theme independent of the editor theme ("dark
-  editor theme but want to create a printable mermaid diagram"), and
-  export. This preview does all three. The zoom/pan math lives in
-  `resources/preview/companion-preview.js` as pure functions, unit-tested
-  in Node (`PreviewScriptTest`).
+- **Unicode-aware identifiers, by design.** `MermaidLexer.scanIdentifier`
+  uses `Char.isLetterOrDigit`, which is Unicode-aware, and there is no
+  ASCII-only "is this identifier valid" check anywhere in the plugin. A
+  `subgraph á` or a café/日本語 label can't be flagged as invalid, and
+  `MermaidSyntaxCheckerTest` reproduces the exact reported cases and
+  expects zero issues.
+- **Real validation.** `MermaidSyntaxChecker` finds unterminated strings,
+  unmatched or mismatched node-shape brackets (`[]`/`()`/`{}`, matched in
+  order, so valid nested shapes like `id[(cylinder)]` pass), and `subgraph`
+  blocks missing their `end`. A corpus of real diagrams is checked against
+  mermaid.js itself: the checker flags none of the corpus diagrams that
+  mermaid.js renders.
+- **The real renderer.** The Preview tab renders with the bundled
+  mermaid.js (pinned 11.16.1, MIT-licensed, committed in
+  `resources/mermaid/` and never fetched at runtime) inside a
+  `JBCefBrowser`. Re-renders wait about 300 ms after the last keystroke.
+  If the IDE build doesn't support JCEF, the tab shows a plain message and
+  highlighting and validation keep working.
+- **Exports that don't churn.** Every export is rendered in a fresh page of
+  its own, so the same diagram gives the same SVG and PNG bytes. I checked
+  that on a corpus of 69 diagrams: 68 export identically, and the one that
+  doesn't is a gitGraph whose commits have no `id:` (mermaid.js names those
+  at random).
 - **Coexistence instead of a silent takeover.** When two plugins claim the
-  same extension, the platform gives it to the one the user installed --
-  so without care, this plugin would take `.mmd`/`.mermaid` away from the
-  bundled editor. Instead it asks once, changes nothing without a click,
-  and keeps its Preview tab available with either editor (it opens by file
-  name, not file type).
-- **Earlier README claim corrected:** it said v1 had no custom pan/zoom
-  because "mermaid.js already has its own". It doesn't; the preview had
-  none until 0.2.0.
+  same file extension, the platform gives it to the one the user installed,
+  so this plugin would take `.mmd`/`.mermaid` away from the bundled editor.
+  Instead it asks once, changes nothing without a click, and keeps its
+  Preview tab available with either editor.
 
 ## Usage
 
-Open a `.mmd`/`.mermaid` file. Structural keywords (`flowchart`,
-`subgraph`, `end`, `sequenceDiagram`, `classDiagram`, etc.) and node-shape
-delimiters, strings, and comments get their own colors; unterminated
-strings, unmatched/mismatched brackets, and subgraphs missing `end` are
-flagged as real errors. Click the "Preview" tab for a live rendered view:
+Open a `.mmd`/`.mermaid` file.
+
+- **Colors.** The word that opens the diagram (`flowchart`,
+  `sequenceDiagram`, `erDiagram`, `gantt` and the other diagram types) gets
+  its own color, and so do each type's keywords: `subgraph` and `end` in a
+  flowchart, `participant` and `loop` in a sequence diagram, `dateFormat`
+  and `section` in a gantt chart. A word is colored only in the diagram
+  types that use it, so a node called `title` in a flowchart stays a node,
+  and text inside labels, notes and messages is never colored. Change the
+  colors in Settings | Editor | Color Scheme | Mermaid Companion.
+- **Validation.** In flowchart, sequence and class diagrams, unterminated
+  strings, unmatched or mismatched brackets and subgraphs missing `end` are
+  flagged as you type. The checks follow each type's grammar: message and
+  note text, class bodies, relation labels, `id>text]` shapes, multi-line
+  quoted labels, directives and front matter are not mistaken for errors.
+  Other diagram types get the preview but no syntax checks, so they never
+  show a false error; the preview shows mermaid.js's own message when one
+  doesn't parse.
+
+Click the "Preview" tab for the rendered diagram:
 
 - **Zoom:** Ctrl+mouse wheel or trackpad pinch (around the cursor), or the
   toolbar's zoom buttons. **Pan:** drag, or scroll. **Fit:** double-click
   or "Fit Diagram". **100%:** "Actual Size".
-- **Export:** PNG, from the toolbar's export button. Some diagram types
-  can't be rasterized in the browser; PNG export then says so, and SVG
-  (Pro) always works.
+- **Click a shape to jump to its line.** The editor opens with the caret on
+  the shape's definition: flowchart nodes and subgraphs, classes, states
+  and their notes, ER entities, requirements, mindmap nodes and sequence
+  participants. A drag pans instead. Edges, sankey links and the start and
+  end dots of composite states aren't clickable. If a name can't be found in
+  the text, the status bar says so and the caret stays put.
+- **Links stay closed.** A diagram can contain links (`click A
+  "https://..."`). The preview never opens them: clicking a linked shape
+  jumps to its line like any other, and the preview refuses to load any
+  other page or open a window.
+- **Copy:** the "Copy" menu puts the diagram on the clipboard as a PNG (1x
+  or 2x) or as a Markdown code block (a ```` ```mermaid ```` fence, longer
+  than any run of backticks in the diagram, ready to paste into a README).
+  A PNG over 40 megapixels is refused with a message instead of filling the
+  clipboard.
+- **Export:** PNG, from the toolbar's export button, at the scale chosen in
+  "PNG Options" (1x or 2x; 2x by default). A diagram too large for the
+  browser's canvas can't be rasterized; PNG export then says so, and SVG
+  (Pro) still works.
+- **Size limits:** the bundled mermaid.js renders diagrams of up to 50,000
+  characters, and flowcharts of up to 500 edges. A larger diagram shows an
+  error instead of a preview, and Export on Save leaves its existing exports
+  alone.
 
-If JetBrains's Mermaid plugin is also installed (it's bundled with
-IntelliJ IDEA from 2026.2), you're asked once which editor should own
-`.mmd`/`.mermaid` files. Switch any time from Tools | "Edit Mermaid Files
-with JetBrains Mermaid Editor" / "... with Mermaid Companion".
+If JetBrains's Mermaid plugin is also installed, you're asked once which
+editor should own `.mmd`/`.mermaid` files. Switch any time from Tools |
+"Edit Mermaid Files with JetBrains Mermaid Editor" / "... with Mermaid
+Companion".
 
 ## Mermaid Companion Pro
 
 An optional paid tier on top of everything above.
 
 - **SVG export** of the rendered diagram, from "Export as SVG (Pro)" in the
-  Preview toolbar.
-- **Diagram themes:** the palette button -- Default, Neutral (printable),
-  Forest, Dark -- independent of the IDE theme. Without Pro the preview
-  uses the Default theme.
+  Preview toolbar, and "Copy SVG Markup (Pro)" in the "Copy" menu.
+- **Diagram themes**, independent of the IDE theme, from the palette
+  button:
+  - mermaid.js's own: Default, Neutral (printable), Forest, Dark, Neo, Neo
+    Dark, Redux, Redux Dark, Redux Color and Redux Dark Color;
+  - three presets of mine: High Contrast (printable), Blueprint and
+    Monochrome. I measured the contrast of the text mermaid.js actually
+    draws against the shape behind it, on five diagram types: 21:1 for
+    High Contrast, 14.2:1 for Monochrome and 10.4:1 for Blueprint. For
+    comparison, mermaid.js's own Dark theme draws edge labels at 4.43:1,
+    just under the 4.5:1 that WCAG AA asks for.
+  - A theme set in the diagram itself (`%%{init: ...}%%` or front matter)
+    always wins. Without Pro the preview uses the Default theme.
+- **Diagram looks:** Classic, Hand-Drawn and Neo, in the same menu.
+  Hand-Drawn changes flowcharts, class, state and ER diagrams; the bundled
+  mermaid.js draws sequence diagrams the same with any look. Hand-Drawn
+  uses a fixed seed, so its exports don't change between saves either. A
+  look set in the diagram's front matter wins.
+- **More PNG options:** 3x, and a transparent background, in "PNG Options"
+  (they apply to the export, Export on Save and the clipboard), and "Copy
+  as PNG (3x, Pro)".
 - **Export on Save.** In the Preview toolbar, open "Export on Save (Pro)"
   and turn on SVG and/or PNG for the diagram. From then on, each time you
   save the file the diagram is rendered again and its export is rewritten
@@ -120,23 +160,25 @@ An optional paid tier on top of everything above.
   same names the manual export suggests).
   - A diagram that doesn't render (a syntax error while you type) leaves
     the existing exports exactly as they are, and the toolbar says so.
-  - The exported SVG carries no per-render id, so saving a diagram that
-    didn't change normally leaves the file, and version control, alone.
+  - Saving a diagram that didn't change leaves its export, and version
+    control, alone (see "Exports that don't churn" above). For gitGraph,
+    give each commit an `id:`.
   - "Sync Now" updates the exports on demand; the toolbar shows when they
     were last synced.
   - Turning it on asks first if the export file already exists, since it
     will be overwritten on every save.
-  - It is remembered per project, for you -- not shared with your team
-    through version control -- and it runs once the file's Preview tab has
+  - It is remembered per project, for you (not shared with your team
+    through version control), and it runs once the file's Preview tab has
     been opened in the IDE session, because the preview is what renders
     the diagram.
 
 Diagram themes were free before version 2026.2.0; any installation that ran
 2026.2.0 or later before November 2, 2026 keeps them without a license. SVG
 export was free before version 2026.3.0; any installation that runs 2026.3.0
-or later before November 9, 2026 keeps it without a license. PNG export is
-free either way. The plugin records the first day it ran in the IDE's local
-settings to know that.
+or later before November 9, 2026 keeps it without a license. Those
+installations get the new themes too, and the diagram looks with them. PNG
+at 1x and 2x is free either way. The plugin records the first day it ran in
+the IDE's local settings to know that.
 
 ## Buying for a team
 
@@ -155,15 +197,24 @@ page. JetBrains Marketplace handles checkout and license management.
 
 ```
 ./gradlew test           # unit tests
+./gradlew test -Pstress=true --tests '*StressTest'   # stress tests, off by default
 ./gradlew buildPlugin    # generates build/distributions/*.zip
 ./gradlew verifyPlugin   # checks compatibility against real IDEs
 ```
+
+[docs/TESTING.md](docs/TESTING.md) describes each suite, including the
+corpus that compares the syntax checker with mermaid.js itself and the
+checks that load the real preview page in a browser.
+
+## Support this project
+
+If this tool saved you time, a star on GitHub helps other developers find it: https://github.com/GapHunterLabs/mermaid-companion
 
 ## License
 
 The source code is licensed under the Apache License 2.0. See `LICENSE`.
 
-The plugin published on JetBrains Marketplace is distributed under the [Gap Hunter Labs End User License Agreement](https://gaphunterlabs.github.io/eula/) ([Spanish](https://gaphunterlabs.github.io/es/eula/)). The EULA covers the paid license for the Pro features (bought on JetBrains Marketplace), warranty, liability, and support. It does not restrict any right the Apache License gives you over the source code.
+The plugin published on JetBrains Marketplace is distributed under the [Gap Hunter Labs End User License Agreement](https://gaphunterlabs.com/eula/) ([Spanish](https://gaphunterlabs.com/es/eula/)). The EULA covers the paid license for the Pro features (bought on JetBrains Marketplace), warranty, liability, and support. It does not restrict any right the Apache License gives you over the source code.
 
 Bundles [mermaid.js](https://github.com/mermaid-js/mermaid) 11.16.1,
-MIT-licensed -- see `src/main/resources/mermaid/LICENSE-mermaid.txt`.
+MIT-licensed: see `src/main/resources/mermaid/LICENSE-mermaid.txt`.

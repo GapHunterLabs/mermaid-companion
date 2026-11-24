@@ -1,0 +1,9 @@
+classDiagram
+    class Square~Shape~ {
+        <<interface>>
+        +List~int~ items
+        +getArea() double
+        -int[] ids
+    }
+    Square <|.. Circle
+    Animal "1" --> "*" Leg : has

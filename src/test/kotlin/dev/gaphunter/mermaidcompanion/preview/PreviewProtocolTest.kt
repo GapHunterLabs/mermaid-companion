@@ -75,17 +75,36 @@ class PreviewProtocolTest {
             }
 
             // A fresh page: its own bridge log and its own queue of pending mermaid renders.
-            function loadPage() {
+            // opts.noLib: the page lost its bundled script; opts.brokenLib: the copy does not start mermaid.
+            function loadPage(opts) {
+                opts = opts || {};
                 const sent = [];
                 const pending = [];
                 const configs = [];
                 const strays = {};
+                const frames = [];
                 const els = { viewport: makeEl('viewport'), stage: makeEl('stage'), error: makeEl('error') };
+                if (!opts.noLib) els['mermaid-lib'] = { textContent: '/* bundled mermaid.js */' };
+                const body = { style: {}, appendChild(f) { f.parentNode = body; }, removeChild(f) { f.parentNode = null; } };
+                // An export's own page, with its own mermaid: its renders queue up in frame.pending.
+                function makeFrame() {
+                    const win = {};
+                    const frame = { style: {}, parentNode: null, pending: [], configs: [], setAttribute() {}, contentWindow: win };
+                    frame.contentDocument = { createElement: () => ({}), head: { appendChild(s) {
+                        if (s.text && !opts.brokenLib) win.mermaid = {
+                            initialize(c) { frame.configs.push(c); },
+                            render(id, text) { return new Promise((resolve, reject) => frame.pending.push({ id, text, resolve, reject })); },
+                            mermaidAPI: { getConfig: () => ({ maxTextSize: 50000 }) }
+                        };
+                    } } };
+                    frames.push(frame);
+                    return frame;
+                }
                 const sandbox = {
                     document: {
-                        body: { style: {} },
+                        body,
                         getElementById(id) { return els[id] || strays[id] || null; },
-                        createElement() { return makeEl('x'); }
+                        createElement(tag) { return tag === 'iframe' ? makeFrame() : makeEl('x'); }
                     },
                     mermaid: {
                         initialize(config) { configs.push(config); },
@@ -100,7 +119,7 @@ class PreviewProtocolTest {
                 vm.createContext(sandbox);
                 vm.runInContext(code, sandbox);
                 return {
-                    root: sandbox, els, pending, configs, strays,
+                    root: sandbox, els, pending, configs, strays, frames,
                     // Everything the page told the plugin except the constant zoom chatter.
                     messages() { return sent.filter((m) => m.indexOf('zoom:') !== 0); },
                     clear() { sent.length = 0; }
@@ -157,6 +176,10 @@ class PreviewProtocolTest {
                 page.clear();
                 page.root.gapHunterExportSvg('sync');
                 page.root.gapHunterExportSvg();
+                assert.strictEqual(page.frames.length, 2, 'each export renders in a page of its own');
+                await tick();
+                page.frames.forEach((f) => f.pending[0].resolve(okSvg('diagram')));
+                await tick();
                 const exported = page.messages();
                 assert.strictEqual(exported.length, 2);
                 assert.ok(exported[0].indexOf('syncsvg:<svg') === 0, exported[0]);
@@ -189,6 +212,87 @@ class PreviewProtocolTest {
                 assert.ok(removed, 'the scratch element left by a failed render is removed');
                 assert.ok(page.configs.length > 0, 'mermaid was configured');
                 assert.ok(page.configs.every((c) => c.suppressErrorRendering === true), 'mermaid never draws its own error graphic');
+
+                // 8. An export exports the last diagram that rendered, not text that is broken while typing.
+                page = loadPage();
+                page.root.gapHunterRender('graph TD\nA-->Good', 11);
+                page.pending[0].resolve(okSvg('good'));
+                await tick();
+                page.root.gapHunterRender('graph TD\nA--', 12);
+                page.pending[1].reject(new Error('Parse error'));
+                await tick();
+                page.root.gapHunterExportSvg('sync');
+                page.root.gapHunterExportPng('sync');
+                await tick();
+                assert.deepStrictEqual(page.frames.map((f) => f.pending[0].text), ['graph TD\nA-->Good', 'graph TD\nA-->Good']);
+                assert.ok(page.frames.every((f) => f.pending[0].id === 'mermaid-diagram'), 'the export id is the stable one');
+
+                // 9. The export's page is removed whether its render succeeds or fails; a failure says why, in its kind.
+                page = loadPage();
+                page.root.gapHunterRender('graph TD\nA-->B', 13);
+                page.pending[0].resolve(okSvg('b'));
+                await tick();
+                page.clear();
+                page.root.gapHunterExportSvg('sync');
+                page.root.gapHunterExportSvg();
+                assert.ok(page.frames.every((f) => f.parentNode !== null), 'attached while rendering');
+                await tick();
+                page.frames[0].pending[0].reject(new Error('boom\nsecond line'));
+                page.frames[1].pending[0].resolve(okSvg('fine'));
+                await tick();
+                assert.ok(page.frames.every((f) => f.parentNode === null), 'every export page is removed');
+                const nine = page.messages();
+                assert.ok(nine.includes('syncerror:SVG export failed: boom second line'), nine.join(' | '));
+                assert.ok(nine.some((m) => m.indexOf('svg:<svg') === 0), nine.join(' | '));
+
+                // 10. Without the bundled script, an export fails with a reason and opens nothing.
+                page = loadPage({ noLib: true });
+                page.root.gapHunterRender('graph TD\nA-->B', 14);
+                page.pending[0].resolve(okSvg('b'));
+                await tick();
+                page.clear();
+                page.root.gapHunterExportSvg('sync');
+                page.root.gapHunterExportPng();
+                await tick();
+                assert.strictEqual(page.frames.length, 0);
+                assert.deepStrictEqual(page.messages(), [
+                    'syncerror:SVG export failed: the bundled mermaid.js is missing from the preview page',
+                    'error:PNG export failed: the bundled mermaid.js is missing from the preview page']);
+
+                // 11. A copy of the script that does not start mermaid: a reason, and the page is removed.
+                page = loadPage({ brokenLib: true });
+                page.root.gapHunterRender('graph TD\nA-->B', 15);
+                page.pending[0].resolve(okSvg('b'));
+                await tick();
+                page.clear();
+                page.root.gapHunterExportSvg('sync');
+                await tick();
+                assert.ok(page.frames.length === 1 && page.frames[0].parentNode === null);
+                assert.deepStrictEqual(page.messages(), ['syncerror:SVG export failed: the bundled mermaid.js did not start in the separate page']);
+
+                // 12. The PNG's settings (no HTML labels) stay in its own page; the preview's mermaid is not reconfigured.
+                page = loadPage();
+                page.root.gapHunterSetTheme('forest');
+                page.root.gapHunterRender('graph TD\nA-->B', 16);
+                page.pending[page.pending.length - 1].resolve(okSvg('b'));
+                await tick();
+                const before = page.configs.length;
+                page.root.gapHunterExportPng('sync');
+                await tick();
+                assert.strictEqual(page.configs.length, before, 'the preview page is not reconfigured by an export');
+                const pngConfig = page.frames[0].configs[0];
+                assert.strictEqual(pngConfig.htmlLabels, false);
+                assert.strictEqual(pngConfig.theme, 'forest', 'the export uses the preview theme');
+                assert.strictEqual(pngConfig.handDrawnSeed, 1);
+                assert.strictEqual(pngConfig.suppressErrorRendering, true);
+
+                // 13. A stand-in "too large" diagram from the export page is an error, never an export.
+                page.clear();
+                page.root.gapHunterExportSvg('sync');
+                await tick();
+                page.frames[1].pending[0].resolve({ svg: '<svg><text>Maximum text size in diagram exceeded</text></svg>' });
+                await tick();
+                assert.deepStrictEqual(page.messages(), ['syncerror:SVG export failed: the diagram is longer than the 50000 characters mermaid.js renders.']);
 
                 console.log('ALL OK');
             })().catch((e) => { console.log(e && e.stack || e); process.exit(1); });
