@@ -46,15 +46,23 @@ html, body {{ margin: 0; height: 100%; overflow: hidden; background: #ffffff; }}
 </style></head><body>
 <div id="error"></div>
 <div id="viewport"><div id="stage"></div></div>
-<script>{mermaid_js}</script>
+<script id="mermaid-lib">{mermaid_js}</script>
 <script>{companion_js}</script>
 </body></html>"""
 
 RENDER_ID = re.compile(r"gap-hunter-mermaid-(?:svg|png)-\d+")  # SvgNormalizer.kt
 
 
+ICONIFY_DECLARATION = re.compile(r'\bid="(IconifyId[0-9a-f]+)"')  # SvgNormalizer.kt
+ICONIFY_TOKEN = re.compile(r"IconifyId[0-9a-f]+(?![0-9A-Za-z_-])")
+
+
 def normalize(svg: str) -> str:
-    return RENDER_ID.sub("mermaid-diagram", svg)
+    fixed = RENDER_ID.sub("mermaid-diagram", svg)
+    renamed = {}
+    for m in ICONIFY_DECLARATION.finditer(fixed):
+        renamed.setdefault(m.group(1), "IconifyId-%d" % len(renamed))
+    return ICONIFY_TOKEN.sub(lambda m: renamed.get(m.group(0), m.group(0)), fixed) if renamed else fixed
 
 
 def wait_message(page, start_index, prefixes, timeout_s=30):
@@ -72,6 +80,7 @@ def wait_message(page, start_index, prefixes, timeout_s=30):
 
 
 rows = []
+export_ms = []
 with sync_playwright() as pw:
     browser = pw.chromium.launch(executable_path=exe) if exe else pw.chromium.launch()
     page = browser.new_page(viewport={"width": 1280, "height": 800})
@@ -101,8 +110,12 @@ with sync_playwright() as pw:
             if m is None or not m.startswith("rendered:"):
                 return (m or "timeout")[:160], None, ms, 0
             fo = page.evaluate("document.querySelectorAll('#stage svg foreignObject').length")
+            t1 = time.time()
             page.evaluate("window.gapHunterExportSvg('sync')")
             idx, s = wait_message(page, idx, ["syncsvg:", "syncerror:"])
+            export_ms.append(int((time.time() - t1) * 1000))
+            if s and s.startswith("syncerror:"):
+                print("  export error:", s[:200])
             return "rendered", (s[len("syncsvg:"):] if s and s.startswith("syncsvg:") else None), ms, fo
 
         status, svg1, ms, fo = render_and_export_svg()
@@ -133,6 +146,9 @@ with sync_playwright() as pw:
         rows.append(row)
         print(json.dumps(row, ensure_ascii=False)[:400])
     browser.close()
+if export_ms:
+    srt = sorted(export_ms)
+    print("SVG export ms: median %d, p90 %d, max %d over %d exports" % (srt[len(srt) // 2], srt[int(len(srt) * 0.9)], srt[-1], len(srt)))
 
 cols = ["file", "parse", "render", "renderMs", "fo", "svgBytes", "svgStable", "svgRawSame", "png", "pngStable", "svgDiff"]
 with out_tsv.open("w", encoding="utf-8", newline="\n") as fh:

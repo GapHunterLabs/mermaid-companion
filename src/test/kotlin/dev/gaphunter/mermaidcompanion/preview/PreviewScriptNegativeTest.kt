@@ -40,7 +40,8 @@ class PreviewScriptNegativeTest {
             function page(renderImpl, canvasAnswer) {
                 const el = () => ({ style: {}, textContent: '', innerHTML: '', clientWidth: 800, clientHeight: 600,
                     addEventListener() {}, querySelector() { return null; }, getBoundingClientRect() { return { left: 0, top: 0 }; } });
-                const elements = { viewport: el(), stage: el(), error: el() };
+                const elements = { viewport: el(), stage: el(), error: el(), 'mermaid-lib': { textContent: '/* bundled mermaid.js */' } };
+                const frames = [];
                 const sent = [], configs = [], images = [];
                 const svgStub = (w, h) => {
                     const attrs = {};
@@ -49,11 +50,22 @@ class PreviewScriptNegativeTest {
                         cloneNode() { return node; } };
                     return node;
                 };
+                const mermaidStub = { initialize: (c) => configs.push(c), render: renderImpl,
+                    mermaidAPI: { getConfig: () => ({ maxTextSize: 50000 }) } };
+                const body = { style: {}, appendChild(f) { f.parentNode = body; }, removeChild(f) { f.parentNode = null; } };
                 const sandbox = {
                     document: {
-                        body: { style: {} },
+                        body,
                         getElementById: (id) => elements[id] || null,
                         createElement: (tag) => {
+                            if (tag === 'iframe') {
+                                // An export's own page: the script copied into it starts the same mermaid stub.
+                                const win = {};
+                                const frame = { style: {}, parentNode: null, setAttribute() {}, contentWindow: win,
+                                    contentDocument: { createElement: () => ({}), head: { appendChild(s) { if (s.text) win.mermaid = mermaidStub; } } } };
+                                frames.push(frame);
+                                return frame;
+                            }
                             if (tag === 'canvas') {
                                 return { width: 0, height: 0, getContext: () => ({ fillRect() {}, drawImage() {} }),
                                     toDataURL: () => canvasAnswer };
@@ -67,8 +79,7 @@ class PreviewScriptNegativeTest {
                         }
                     },
                     window: { addEventListener() {} },
-                    mermaid: { initialize: (c) => configs.push(c), render: renderImpl,
-                        mermaidAPI: { getConfig: () => ({ maxTextSize: 50000 }) } },
+                    mermaid: mermaidStub,
                     gapHunterBridge: (msg) => sent.push(msg),
                     XMLSerializer: function () { this.serializeToString = () => '<svg/>'; },
                     Image: function () { images.push(this); const img = this;
@@ -78,7 +89,7 @@ class PreviewScriptNegativeTest {
                 };
                 vm.createContext(sandbox);
                 vm.runInContext(fs.readFileSync(SCRIPT, 'utf8'), sandbox);
-                return { sandbox, sent, configs, images, elements };
+                return { sandbox, sent, configs, images, elements, frames };
             }
             const flush = () => new Promise((r) => setImmediate(r));
 

@@ -24,7 +24,7 @@
         <ul>
           <li><b>SVG export</b> of the rendered diagram.</li>
           <li><b>Diagram themes</b> (Default, Neutral, Forest, Dark), independent of the IDE theme: a light, printable diagram in a dark IDE.</li>
-          <li><b>Export on Save:</b> every save re-renders the diagram and rewrites its SVG and/or PNG next to the file. A diagram that fails to render leaves the previous export untouched, and an unchanged diagram leaves the file, and your Git history, alone. Sync Now and the last sync time are in the preview toolbar.</li>
+          <li><b>Export on Save:</b> every save re-renders the diagram and rewrites its SVG and/or PNG next to the file. A diagram that fails to render leaves the previous export untouched, and an unchanged diagram leaves the file, and your Git history, alone (for gitGraph, give each commit an id: mermaid.js names commits without one at random). Sync Now and the last sync time are in the preview toolbar.</li>
         </ul>
         <p>Diagram themes were free before version 2026.2.0; any installation that ran 2026.2.0 or later before November 2, 2026 keeps them without a license. SVG export was free before version 2026.3.0; any installation that runs 2026.3.0 or later before November 9, 2026 keeps it without a license. PNG export is free either way.</p>
         <p><a href="https://github.com/GapHunterLabs/mermaid-companion">Documentation</a> · <a href="https://github.com/GapHunterLabs/mermaid-companion/issues">Report an issue</a></p>

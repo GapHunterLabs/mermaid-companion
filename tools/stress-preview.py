@@ -15,7 +15,7 @@ companion_js = (repo / "src/main/resources/preview/companion-preview.js").read_t
 html = f"""<html><head><style>html, body {{ margin: 0; height: 100%; overflow: hidden; }}
 #viewport {{ position: absolute; inset: 0; overflow: hidden; }} #stage {{ position: absolute; left: 0; top: 0; transform-origin: 0 0; }}
 #error {{ display: none; }}</style></head><body><div id="error"></div><div id="viewport"><div id="stage"></div></div>
-<script>{mermaid_js}</script><script>{companion_js}</script></body></html>"""
+<script id="mermaid-lib">{mermaid_js}</script><script>{companion_js}</script></body></html>"""
 
 
 def chain(n, direction="TD"):

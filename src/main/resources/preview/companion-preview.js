@@ -127,8 +127,8 @@
     var view = { scale: 1, x: 0, y: 0 };
     var theme = 'default';
     var lastText = null;
+    var lastGoodText = null; // the text of the last render that succeeded: what an export exports
     var renderSeq = 0;
-    var exportSeq = 0; // separate from renderSeq: an export must never cancel a preview render
     var hasFitted = false;
     var drag = null;
 
@@ -217,12 +217,74 @@
      * with random curve points unless the seed is fixed, which made two renders of the same
      * diagram differ and Export on Save rewrite an unchanged file.
      */
-    function initializeMermaid(extra) {
+    function configFor(extra) {
         var config = { startOnLoad: false, theme: theme, suppressErrorRendering: true, handDrawnSeed: 1 };
         for (var key in (extra || {})) {
             config[key] = extra[key];
         }
-        root.mermaid.initialize(config);
+        return config;
+    }
+
+    function initializeMermaid(extra) {
+        root.mermaid.initialize(configFor(extra));
+    }
+
+    /*
+     * Exports render in a page of their own. mermaid.js numbers some elements with counters that
+     * live as long as the page (sequence actors, class ids, sankey links), so the same diagram
+     * rendered twice in the preview page gives different SVG, and Export on Save rewrote an
+     * unchanged file. A new iframe starts every counter from zero. It has no src, so it shares
+     * this page's origin, and the bundled script is copied into it as text: nothing is fetched.
+     */
+    var EXPORT_ID = 'mermaid-diagram'; // the same id SvgNormalizer.kt writes
+
+    function freshMermaid() {
+        var lib = document.getElementById('mermaid-lib');
+        if (!lib || !lib.textContent) {
+            return Promise.reject(new Error('the bundled mermaid.js is missing from the preview page'));
+        }
+        var frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.tabIndex = -1;
+        // Laid out (mermaid measures text) but never shown; visibility, not display.
+        frame.style.cssText = 'position:absolute;left:-20000px;top:0;width:2000px;height:2000px;border:0;visibility:hidden';
+        document.body.appendChild(frame);
+        var dispose = function () {
+            if (frame.parentNode) {
+                frame.parentNode.removeChild(frame);
+            }
+        };
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument || (win && win.document);
+        if (!win || !doc) {
+            dispose();
+            return Promise.reject(new Error('could not open a separate page to render the export'));
+        }
+        var script = doc.createElement('script');
+        script.text = lib.textContent;
+        (doc.head || doc.documentElement || doc.body).appendChild(script);
+        if (!win.mermaid || typeof win.mermaid.render !== 'function') {
+            dispose();
+            return Promise.reject(new Error('the bundled mermaid.js did not start in the separate page'));
+        }
+        return Promise.resolve({ mermaid: win.mermaid, dispose: dispose });
+    }
+
+    function renderIsolated(text, extra) {
+        return freshMermaid().then(function (m) {
+            m.mermaid.initialize(configFor(extra));
+            return m.mermaid.render(EXPORT_ID, text).then(function (result) {
+                m.dispose();
+                return result;
+            }, function (err) {
+                m.dispose();
+                throw err;
+            });
+        });
+    }
+
+    function errorText(err) {
+        return String((err && err.message) || err).replace(/\s+/g, ' ');
     }
 
     /*
@@ -254,6 +316,7 @@
                 return;
             }
             stage.innerHTML = result.svg;
+            lastGoodText = text;
             var svg = stage.querySelector('svg');
             if (svg) {
                 naturalize(svg);
@@ -321,13 +384,43 @@
         return new XMLSerializer().serializeToString(clone);
     }
 
+    var NOTHING_YET = 'Nothing to export yet -- the diagram has not rendered.';
+
+    /** The export's own SVG element, sized like the preview's (see naturalize). */
+    function exportSvgElement(markup) {
+        var holder = document.createElement('div');
+        holder.innerHTML = markup;
+        var svg = holder.querySelector('svg');
+        if (svg) {
+            naturalize(svg);
+        }
+        return svg;
+    }
+
+    /*
+     * Exports the last diagram that rendered, never text that is still broken while it is
+     * being typed: the preview shows that diagram too.
+     */
     root.gapHunterExportSvg = function (mode) {
-        var svg = stage.querySelector('svg');
-        if (!svg) {
-            out(mode, 'error', 'Nothing to export yet -- the diagram has not rendered.');
+        var text = lastGoodText;
+        if (text === null) {
+            out(mode, 'error', NOTHING_YET);
             return;
         }
-        out(mode, 'svg', serialize(svg));
+        renderIsolated(text).then(function (result) {
+            if (isTooLargeStandIn(text, result.svg)) {
+                out(mode, 'error', 'SVG export failed: the diagram is longer than the ' + maxTextSize() + ' characters mermaid.js renders.');
+                return;
+            }
+            var svg = exportSvgElement(result.svg);
+            if (!svg) {
+                out(mode, 'error', 'SVG export failed: mermaid.js returned no SVG.');
+                return;
+            }
+            out(mode, 'svg', serialize(svg));
+        }).catch(function (err) {
+            out(mode, 'error', 'SVG export failed: ' + errorText(err));
+        });
     };
 
     /*
@@ -337,23 +430,21 @@
      * diagram type still taints the canvas, report it instead of failing silently.
      */
     root.gapHunterExportPng = function (mode) {
-        if (lastText === null) {
-            out(mode, 'error', 'Nothing to export yet -- the diagram has not rendered.');
+        var text = lastGoodText;
+        if (text === null) {
+            out(mode, 'error', NOTHING_YET);
             return;
         }
-        var seq = ++exportSeq;
-        initializeMermaid({ htmlLabels: false, flowchart: { htmlLabels: false } });
-        var pngId = 'gap-hunter-mermaid-png-' + seq;
-        root.mermaid.render(pngId, lastText).then(function (result) {
-            initializeMermaid();
-            if (isTooLargeStandIn(lastText, result.svg)) {
+        renderIsolated(text, { htmlLabels: false, flowchart: { htmlLabels: false } }).then(function (result) {
+            if (isTooLargeStandIn(text, result.svg)) {
                 out(mode, 'error', 'PNG export failed: the diagram is longer than the ' + maxTextSize() + ' characters mermaid.js renders.');
                 return;
             }
-            var holder = document.createElement('div');
-            holder.innerHTML = result.svg;
-            var svg = holder.querySelector('svg');
-            naturalize(svg);
+            var svg = exportSvgElement(result.svg);
+            if (!svg) {
+                out(mode, 'error', 'PNG export failed: mermaid.js returned no SVG.');
+                return;
+            }
             var w = parseFloat(svg.getAttribute('width')) || 800;
             var h = parseFloat(svg.getAttribute('height')) || 600;
             if (!canvasFits(Math.ceil(w * 2), Math.ceil(h * 2))) {
@@ -386,9 +477,7 @@
             };
             img.src = 'data:image/svg+xml;base64,' + btoa(bytes);
         }).catch(function (err) {
-            discardStray(pngId);
-            initializeMermaid();
-            out(mode, 'error', 'PNG export failed: ' + ((err && err.message) || err));
+            out(mode, 'error', 'PNG export failed: ' + errorText(err));
         });
     };
 

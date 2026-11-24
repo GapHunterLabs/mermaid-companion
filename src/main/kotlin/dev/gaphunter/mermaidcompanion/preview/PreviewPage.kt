@@ -8,7 +8,7 @@ package dev.gaphunter.mermaidcompanion.preview
  * PreviewPageTest).
  */
 object PreviewPage {
-    val ELEMENT_IDS = listOf("viewport", "stage", "error")
+    val ELEMENT_IDS = listOf("viewport", "stage", "error", "mermaid-lib")
 
     val companionScript: String by lazy {
         val stream = PreviewPage::class.java.getResourceAsStream("/preview/companion-preview.js")
@@ -30,7 +30,7 @@ object PreviewPage {
           <body>
             <div id="error"></div>
             <div id="viewport"><div id="stage"></div></div>
-            <script>$mermaidScript</script>
+            <script id="mermaid-lib">$mermaidScript</script>
             <script>$companionScript</script>
           </body>
         </html>

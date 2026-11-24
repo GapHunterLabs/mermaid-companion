@@ -131,12 +131,11 @@ An optional paid tier on top of everything above.
   same names the manual export suggests).
   - A diagram that doesn't render (a syntax error while you type) leaves
     the existing exports exactly as they are, and the toolbar says so.
-  - The exported SVG carries no per-render id, so saving a flowchart,
-    state, ER, gantt, pie, mindmap or most other diagrams that didn't
-    change leaves the file, and version control, alone. Sequence and class
-    diagrams, sankey, architecture, and gitGraph commits without an `id:`
-    still get a slightly different SVG on each save: mermaid.js numbers
-    their elements across the session, or draws random ids.
+  - Saving a diagram that didn't change leaves its export, and version
+    control, alone: every export is rendered in a page of its own, so the
+    same diagram always gives the same SVG and PNG. The one exception is a
+    gitGraph commit without an `id:`, which mermaid.js names at random;
+    give each commit an `id:` and its exports stay put too.
   - "Sync Now" updates the exports on demand; the toolbar shows when they
     were last synced.
   - Turning it on asks first if the export file already exists, since it
