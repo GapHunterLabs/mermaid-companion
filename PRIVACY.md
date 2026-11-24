@@ -1,4 +1,4 @@
-# Privacy Policy — Mermaid Companion
+# Privacy Policy: Mermaid Companion
 
 **Effective date:** 2026-10-26
 
@@ -9,7 +9,7 @@ is nothing to disclose beyond what's below.
 ## What this plugin collects
 
 **Nothing.** Mermaid Companion does not collect, transmit, or sell
-any data — no source code, no file contents, no usage analytics, no
+any data: no source code, no file contents, no usage analytics, no
 telemetry, no crash reports, no personally identifiable information.
 
 ## What it keeps on your machine
@@ -36,6 +36,11 @@ other IDE setting, and are never sent anywhere.
 operation. Every check, detection, and analysis it performs runs
 entirely in-process, inside your IDE, against the code already open in
 your editor. Nothing you write, open, or edit is ever sent anywhere.
+
+A diagram can contain links (`click A "https://..."`). The preview never opens
+them: a click on a linked node moves the caret to that node instead, and the
+preview refuses to load any other page or open any window. Copying a diagram
+(PNG, SVG or a Markdown code block) puts it on your clipboard and nowhere else.
 
 ## Third parties
 

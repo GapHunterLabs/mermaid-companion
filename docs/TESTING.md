@@ -53,7 +53,26 @@ export worked.
 `tools/stress-preview.py` renders large diagrams (hundreds of edges, the 50,000 character
 limit) through the same page and reports render and PNG export times.
 
-## 3. The stress suite
+## 3. The preview in a real browser
+
+These scripts load the plugin's real preview page (the bundled mermaid.js and
+`companion-preview.js`) in Playwright's headless Chromium. Each exits 1 when a check fails.
+
+| Script | What it checks |
+| --- | --- |
+| `tools/render-corpus.py` | Every corpus diagram: mermaid.js's verdict, render time, and whether two SVG and two PNG exports are byte-identical. |
+| `tools/click-corpus.py` | Clicks every node, subgraph and participant of the corpus with the mouse: each click must name something written in the diagram, a 20 px drag must send nothing, and no click may load another page. Writes `click-targets.tsv`, which `SourceLocatorCorpusTest` reads to check that the plugin finds every target in its diagram's text. |
+| `tools/theme-check.py` | Renders five diagram types with every theme and measures the contrast of the text mermaid.js actually drew against the shape behind it. A preset under 4.5:1 fails, and so does a diagram whose own theme (`%%{init}%%` or front matter) does not win. |
+| `tools/look-check.py` | Classic, Hand-Drawn and Neo: exports stay byte-identical with each look, an unknown look is classic, and a look set in the diagram's front matter wins. Reports which diagram types each look changes. |
+| `tools/stress-preview.py` | Large diagrams: render and PNG export times. |
+
+```
+python -I tools/click-corpus.py . src/test/resources/corpus
+python -I tools/theme-check.py .
+python -I tools/look-check.py .
+```
+
+## 4. The stress suite
 
 ```
 ./gradlew test -Pstress=true --tests '*StressTest'
