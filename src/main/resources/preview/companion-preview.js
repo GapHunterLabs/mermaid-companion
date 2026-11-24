@@ -127,10 +127,71 @@
         return mode === 'sync' || mode === 'copy' ? mode : '';
     }
 
+    /*
+     * What a click on the rendered diagram points at, from one SVG element: its id without the
+     * render's prefix, its class list and the name or data-id mermaid gives sequence actors.
+     * Returns 'name:<id>' (a node, class, state, entity, subgraph, requirement or participant, as
+     * written in the source), 'index:<n>' (the n-th mindmap node) or null. Edges are left out: their
+     * ids (L_a_b_0) cannot be split back into two node ids when an id contains an underscore.
+     */
+    var NODE_ID_PATTERNS = [/^flowchart-(.+)-\d+$/, /^classId-(.+)-\d+$/, /^state-(.+)-\d+$/, /^entity-(.+)-\d+$/];
+    var MAX_TARGET_LENGTH = 256;
+
+    function hasClass(classes, name) {
+        return (' ' + String(classes || '') + ' ').indexOf(' ' + name + ' ') !== -1;
+    }
+
+    /*
+     * `hasText` is false for an element without visible text: the start and end dots mermaid draws
+     * inside a composite state ("Moving_start") are its own, not something written in the source.
+     */
+    function clickTarget(id, classes, actorName, hasText) {
+        var named = function (value) {
+            return value && value.length <= MAX_TARGET_LENGTH && !/[\u0000-\u001f\u007f]/.test(value) ? 'name:' + value : null;
+        };
+        if (actorName && (hasClass(classes, 'actor') || hasClass(classes, 'actor-man'))) {
+            return named(String(actorName));
+        }
+        id = String(id || '');
+        if (!id) {
+            return null;
+        }
+        for (var i = 0; i < NODE_ID_PATTERNS.length; i++) {
+            var m = NODE_ID_PATTERNS[i].exec(id);
+            if (m) {
+                var name = m[1].replace(/----note$/, ''); // a state's note points at its state
+                if (name === 'root_start' || name === 'root_end' || (hasText === false && /_(start|end)$/.test(name))) {
+                    return null;
+                }
+                return named(name);
+            }
+        }
+        var mind = /^node_(\d{1,6})$/.exec(id);
+        if (mind && hasClass(classes, 'mindmap-node')) {
+            return 'index:' + mind[1];
+        }
+        if (/^node-\d+$/.test(id)) {
+            return null; // sankey nodes: numbered by mermaid, their names are only labels
+        }
+        if (hasClass(classes, 'cluster') || hasClass(classes, 'node')) {
+            return named(id);
+        }
+        return null;
+    }
+
+    /* A press that travels farther than this is a drag (pan), not a click. */
+    var CLICK_SLOP = 4;
+
+    function isClick(start, end) {
+        return !!start && !!end && finite(start.x, start.y, end.x, end.y) &&
+            Math.abs(end.x - start.x) <= CLICK_SLOP && Math.abs(end.y - start.y) <= CLICK_SLOP;
+    }
+
     var api = {
         MIN_SCALE: MIN_SCALE, MAX_SCALE: MAX_SCALE, FIT_MAX_SCALE: FIT_MAX_SCALE,
         zoomAt: zoomAt, panBy: panBy, fit: fit, actualSize: actualSize, wheelFactor: wheelFactor,
-        isTooLargeStandIn: isTooLargeStandIn, canvasFits: canvasFits, pngOptions: pngOptions, exportPrefix: exportPrefix
+        isTooLargeStandIn: isTooLargeStandIn, canvasFits: canvasFits, pngOptions: pngOptions, exportPrefix: exportPrefix,
+        clickTarget: clickTarget, isClick: isClick
     };
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = api;
@@ -151,6 +212,8 @@
     var renderSeq = 0;
     var hasFitted = false;
     var drag = null;
+    var press = null;       // where the last mouse press started, to tell a click from a drag
+    var shownRenderId = ''; // the id of the render on screen: the prefix of its element ids
 
     function send(payload) {
         if (typeof root.gapHunterBridge === 'function') {
@@ -337,6 +400,7 @@
             }
             stage.innerHTML = result.svg;
             lastGoodText = text;
+            shownRenderId = renderId;
             var svg = stage.querySelector('svg');
             if (svg) {
                 naturalize(svg);
@@ -524,8 +588,67 @@
             return;
         }
         drag = { x: e.clientX, y: e.clientY };
+        press = { x: e.clientX, y: e.clientY };
         viewport.style.cursor = 'grabbing';
         e.preventDefault();
+    });
+
+    /*
+     * A click on a node asks the plugin to move the caret to it. The element ids carry the
+     * render's id as a prefix ("<render id>-flowchart-A-0"), which is removed first.
+     */
+    function targetAt(el) {
+        var prefix = shownRenderId ? shownRenderId + '-' : '';
+        for (var n = el; n && n !== stage && n.getAttribute; n = n.parentNode) {
+            var id = n.getAttribute('id') || '';
+            if (prefix && id.indexOf(prefix) === 0) {
+                id = id.substring(prefix.length);
+            }
+            var classes = n.getAttribute('class');
+            var actor = n.getAttribute('name') || n.getAttribute('data-id');
+            // A participant's label text has no name of its own: the box next to it (or its group) has it.
+            if (!actor && hasClass(classes, 'actor') && n.parentNode && n.parentNode.querySelector) {
+                var box = n.parentNode.querySelector('[name]');
+                actor = (box && box.getAttribute('name')) || (n.parentNode.getAttribute && n.parentNode.getAttribute('data-id'));
+            }
+            var t = clickTarget(id, classes, actor, !!(n.textContent && n.textContent.trim()));
+            if (t) {
+                return t;
+            }
+        }
+        return null;
+    }
+
+    /*
+     * A diagram's links (click A "https://...") are <a href> elements: a click on one would load
+     * that website inside the preview. Their default action is cancelled before anything else; the
+     * click still moves the caret to the node, like any other. (NavigationGuard.kt is the second line.)
+     */
+    function insideLink(el) {
+        for (var n = el; n && n !== stage; n = n.parentNode) {
+            if (n.tagName && String(n.tagName).toLowerCase() === 'a') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    stage.addEventListener('click', function (e) {
+        if (insideLink(e.target)) {
+            e.preventDefault();
+        }
+    }, true);
+
+    viewport.addEventListener('click', function (e) {
+        var start = press;
+        press = null;
+        if (!isClick(start, { x: e.clientX, y: e.clientY })) {
+            return;
+        }
+        var target = targetAt(e.target);
+        if (target) {
+            send('goto:' + target);
+        }
     });
     window.addEventListener('mousemove', function (e) {
         if (!drag) {

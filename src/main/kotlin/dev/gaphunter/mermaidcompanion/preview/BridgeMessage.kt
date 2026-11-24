@@ -32,6 +32,12 @@ sealed interface BridgeMessage {
     class CopyPng(val bytes: ByteArray) : BridgeMessage
     data class CopyFailure(val message: String) : BridgeMessage
 
+    /** A click on a node, class, state, entity, subgraph or participant: move the caret to [name]. */
+    data class GoToName(val name: String) : BridgeMessage
+
+    /** A click on the [index]-th mindmap node (0 = the root). */
+    data class GoToMindmapNode(val index: Int) : BridgeMessage
+
     companion object {
         private val PNG_SIGNATURE = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte())
 
@@ -63,6 +69,23 @@ sealed interface BridgeMessage {
                     else -> null
                 }
                 "copyerror" -> CopyFailure(body.ifBlank { "Copy failed." })
+                "goto" -> parseGoTo(body)
+                else -> null
+            }
+        }
+
+        const val MAX_NAME_LENGTH = 256
+        const val MAX_MINDMAP_INDEX = 100_000
+
+        /** `name:<id>` or `index:<n>`; anything else, an empty or overlong name, or a control character is dropped. */
+        private fun parseGoTo(body: String): BridgeMessage? {
+            val kind = body.substringBefore(':', "")
+            val value = body.substringAfter(':', "")
+            return when (kind) {
+                "name" -> value.takeIf { it.isNotEmpty() && it.length <= MAX_NAME_LENGTH && it.none { c -> c.isISOControl() } }
+                    ?.let { GoToName(it) }
+                "index" -> value.takeIf { it.length <= 6 && it.all { c -> c in '0'..'9' } && it.isNotEmpty() }
+                    ?.toInt()?.takeIf { it <= MAX_MINDMAP_INDEX }?.let { GoToMindmapNode(it) }
                 else -> null
             }
         }

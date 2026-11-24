@@ -21,6 +21,8 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
 import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorState
+import com.intellij.openapi.fileEditor.OpenFileDescriptor
+import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
@@ -45,7 +47,10 @@ import dev.gaphunter.mermaidcompanion.sync.SyncWriter
 import dev.gaphunter.mermaidcompanion.sync.WriteResult
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
+import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
+import org.cef.handler.CefRequestHandlerAdapter
+import org.cef.network.CefRequest
 import java.awt.BorderLayout
 import java.awt.datatransfer.StringSelection
 import java.beans.PropertyChangeListener
@@ -194,6 +199,17 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
                 }
             })
 
+        // The preview never navigates away from its page or opens windows (see NavigationGuard).
+        newBrowser.jbCefClient.addRequestHandler(object : CefRequestHandlerAdapter() {
+            override fun onBeforeBrowse(
+                browser: CefBrowser?, frame: CefFrame?, request: CefRequest?, userGesture: Boolean, isRedirect: Boolean,
+            ): Boolean = NavigationGuard.cancelNavigation(frame?.isMain == true, pageLoaded)
+        }, newBrowser.cefBrowser)
+        newBrowser.jbCefClient.addLifeSpanHandler(object : CefLifeSpanHandlerAdapter() {
+            override fun onBeforePopup(browser: CefBrowser?, frame: CefFrame?, targetUrl: String?, targetFrameName: String?): Boolean =
+                NavigationGuard.cancelPopup(targetUrl)
+        }, newBrowser.cefBrowser)
+
         newBrowser.jbCefClient.addLoadHandler(object : CefLoadHandlerAdapter() {
             override fun onLoadEnd(cefBrowser: CefBrowser, frame: CefFrame, httpStatusCode: Int) {
                 if (!frame.isMain) return
@@ -251,6 +267,8 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
             is BridgeMessage.CopySvg -> copyText(message.markup, "SVG markup copied to the clipboard.")
             is BridgeMessage.CopyPng -> copyPng(message.bytes)
             is BridgeMessage.CopyFailure -> notify(message.message, NotificationType.WARNING)
+            is BridgeMessage.GoToName -> goTo(document?.let { SourceLocator.offsetOfName(it.charsSequence, message.name) }, message.name)
+            is BridgeMessage.GoToMindmapNode -> goTo(document?.let { SourceLocator.offsetOfMindmapNode(it.charsSequence, message.index) }, "node ${message.index + 1}")
         }
     }
 
@@ -331,6 +349,20 @@ class MermaidPreviewFileEditor(private val project: Project, private val file: V
         }
         LocalFileSystem.getInstance().refreshAndFindFileByNioFile(target)
         notify("Diagram exported to ${target.fileName}", NotificationType.INFORMATION)
+    }
+
+    /**
+     * Moves the caret to [offset] in the text editor of this file. A name the text no longer holds
+     * (the diagram changed since it rendered) is reported in the status bar, not in a balloon, so
+     * clicking around never piles up notifications.
+     */
+    private fun goTo(offset: Int?, what: String) {
+        val length = document?.textLength ?: 0
+        if (offset == null || offset < 0 || offset > length) {
+            StatusBar.Info.set("Mermaid Companion: couldn't find ${what.take(80)} in the diagram's text.", project)
+            return
+        }
+        OpenFileDescriptor(project, file, offset).navigate(true)
     }
 
     private fun copyText(text: String, confirmation: String) {

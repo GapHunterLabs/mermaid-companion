@@ -338,6 +338,58 @@ class PreviewScriptNegativeTest {
     )
 
     @Test
+    fun `a click names the node, class, state, entity, subgraph or participant as written`() = runNode(
+        """
+        same(p.clickTarget('flowchart-start-0', 'node default'), 'name:start');
+        same(p.clickTarget('flowchart-a-b-c-12', 'node'), 'name:a-b-c');
+        same(p.clickTarget('classId-Animal-0', 'node default'), 'name:Animal');
+        same(p.clickTarget('state-Idle-1', 'node statediagram-state'), 'name:Idle');
+        same(p.clickTarget('entity-CUSTOMER-0', 'node default'), 'name:CUSTOMER');
+        same(p.clickTarget('grp', 'cluster'), 'name:grp');
+        same(p.clickTarget('req1', 'node default'), 'name:req1');
+        same(p.clickTarget('', 'actor actor-top', 'Alice'), 'name:Alice');
+        same(p.clickTarget('', 'actor-man actor-top', 'Bob'), 'name:Bob');
+        same(p.clickTarget('node_2', 'node mindmap-node section-1'), 'index:2');
+        same(p.clickTarget('state-Still----note-4', 'node'), 'name:Still');
+        same(p.clickTarget('state-Moving_start-3', 'node', null, false), null);
+        same(p.clickTarget('state-Moving_end-3', 'node', null, false), null);
+        same(p.clickTarget('state-x_start-3', 'node', null, true), 'name:x_start');
+        same(p.clickTarget('node-1', 'node'), null);
+        same(p.clickTarget('node-1', 'cluster'), null);
+        """,
+    )
+
+    @Test
+    fun `a click on anything else, or with a name that could not be a real id, points at nothing`() = runNode(
+        """
+        for (const [id, cls, name] of [['state-root_start-0', 'node'], ['state-root_end-3', 'node'], ['L_a_b_0', 'edge'],
+                ['edge0', 'label'], ['', ''], [null, null], ['node_2', 'node'], ['node_1234567', 'mindmap-node'],
+                ['actor0', 'actor-line', 'Alice'], ['x', 'nodes'], ['x', 'clusterx']]) {
+            same(p.clickTarget(id, cls, name), cls === 'node' && id === 'node_2' ? 'name:node_2' : null);
+        }
+        same(p.clickTarget('', 'actor', 'x'.repeat(256)), 'name:' + 'x'.repeat(256));
+        same(p.clickTarget('', 'actor', 'x'.repeat(257)), null);
+        same(p.clickTarget('', 'actor', 'a' + String.fromCharCode(10) + 'b'), null);
+        same(p.clickTarget('', 'actor', 'a' + String.fromCharCode(0)), null);
+        same(p.clickTarget('flowchart-' + 'y'.repeat(300) + '-0', 'node'), null);
+        """,
+    )
+
+    @Test
+    fun `a press that travels more than 4 px is a drag, not a click`() = runNode(
+        """
+        assert.ok(p.isClick({ x: 10, y: 10 }, { x: 10, y: 10 }));
+        assert.ok(p.isClick({ x: 10, y: 10 }, { x: 14, y: 6 }));
+        assert.ok(!p.isClick({ x: 10, y: 10 }, { x: 15, y: 10 }));
+        assert.ok(!p.isClick({ x: 10, y: 10 }, { x: 10, y: 4.9 }));
+        for (const bad of [null, undefined, { x: NaN, y: 0 }, { x: 0, y: Infinity }]) {
+            assert.ok(!p.isClick(bad, { x: 0, y: 0 }));
+            assert.ok(!p.isClick({ x: 0, y: 0 }, bad));
+        }
+        """,
+    )
+
+    @Test
     fun `a NaN zoom from the toolbar leaves the stage transform finite`() = runNode(
         """
         const pg = page(async () => ({ svg: '<svg/>' }));
